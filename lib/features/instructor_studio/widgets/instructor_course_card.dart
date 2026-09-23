@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
@@ -228,7 +229,22 @@ class _InstructorCourseCardState extends ConsumerState<InstructorCourseCard> {
             width: 54,
             height: 54,
             child: (c.coverUrl != null && c.coverUrl!.isNotEmpty)
-                ? CachedNetworkImage(
+                ? (kIsWeb ? Image.network(
+                    mediaUrl(c.coverUrl),
+                    fit: BoxFit.cover,
+                    errorBuilder: (ctx, _, __) => Container(
+                      color: theme.colorScheme.primaryContainer,
+                      child: Center(
+                        child: Text(
+                          c.title.isNotEmpty ? c.title[0].toUpperCase() : 'C',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ) : CachedNetworkImage(
                     imageUrl: mediaUrl(c.coverUrl),
                     fit: BoxFit.cover,
                     placeholder: (ctx, _) => Container(color: Colors.grey[200]),
@@ -244,7 +260,7 @@ class _InstructorCourseCardState extends ConsumerState<InstructorCourseCard> {
                         ),
                       ),
                     ),
-                  )
+                  ))
                 : Container(
                     color: theme.colorScheme.primaryContainer,
                     child: Center(

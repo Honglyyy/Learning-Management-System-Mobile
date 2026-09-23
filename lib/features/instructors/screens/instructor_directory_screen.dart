@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers.dart';
@@ -108,7 +109,7 @@ class _InstructorDirectoryScreenState extends ConsumerState<InstructorDirectoryS
                                             radius: 28,
                                             backgroundColor: theme.colorScheme.primary,
                                             backgroundImage: photo.isNotEmpty
-                                                ? CachedNetworkImageProvider(photo)
+                                                ? (kIsWeb ? NetworkImage(photo) as ImageProvider : CachedNetworkImageProvider(photo))
                                                 : null,
                                             onBackgroundImageError: photo.isNotEmpty
                                                 ? (exception, stackTrace) {}

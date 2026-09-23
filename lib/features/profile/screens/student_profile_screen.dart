@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -269,7 +270,7 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
                         CircleAvatar(
                           radius: 46,
                           backgroundColor: theme.colorScheme.primary,
-                          backgroundImage: photo.isNotEmpty ? CachedNetworkImageProvider(photo) : null,
+                          backgroundImage: photo.isNotEmpty ? (kIsWeb ? NetworkImage(photo) as ImageProvider : CachedNetworkImageProvider(photo)) : null,
                           onBackgroundImageError: photo.isNotEmpty ? (exception, stackTrace) {} : null,
                           child: photo.isEmpty
                               ? const Icon(Icons.person, size: 48, color: Colors.white)

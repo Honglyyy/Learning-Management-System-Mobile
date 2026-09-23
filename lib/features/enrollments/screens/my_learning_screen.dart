@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -200,7 +201,14 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
                     width: 90,
                     height: 80,
                     child: cover.isNotEmpty
-                        ? CachedNetworkImage(
+                        ? (kIsWeb ? Image.network(
+                            cover,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: const Color(0xFF1E293B),
+                              child: const Center(child: Icon(Icons.school, size: 28, color: Colors.white54)),
+                            ),
+                          ) : CachedNetworkImage(
                             imageUrl: cover,
                             fit: BoxFit.cover,
                             placeholder: (context, _) => Container(color: Colors.grey.withValues(alpha: 0.2)),
@@ -208,7 +216,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
                               color: const Color(0xFF1E293B),
                               child: const Center(child: Icon(Icons.school, size: 28, color: Colors.white54)),
                             ),
-                          )
+                          ))
                         : Container(color: Colors.grey.withValues(alpha: 0.2), child: const Icon(Icons.school)),
                   ),
                 ),
@@ -291,7 +299,14 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
                     width: 90,
                     height: 80,
                     child: cover.isNotEmpty
-                        ? CachedNetworkImage(
+                        ? (kIsWeb ? Image.network(
+                            cover,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Container(
+                              color: const Color(0xFF1E293B),
+                              child: const Center(child: Icon(Icons.verified, size: 28, color: Colors.white54)),
+                            ),
+                          ) : CachedNetworkImage(
                             imageUrl: cover,
                             fit: BoxFit.cover,
                             placeholder: (context, _) => Container(color: Colors.grey.withValues(alpha: 0.2)),
@@ -299,7 +314,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
                               color: const Color(0xFF1E293B),
                               child: const Center(child: Icon(Icons.verified, size: 28, color: Colors.white54)),
                             ),
-                          )
+                          ))
                         : Container(color: Colors.grey.withValues(alpha: 0.2), child: const Icon(Icons.verified)),
                   ),
                 ),

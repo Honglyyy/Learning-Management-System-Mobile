@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../utils/formatters.dart';
 import '../utils/media_url.dart';
 
@@ -258,6 +259,20 @@ class CourseCard extends StatelessWidget {
         ),
       );
     }
+    
+    if (kIsWeb) {
+      return Image.network(
+        url,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: const Color(0xFF1E293B),
+          child: const Center(
+            child: Icon(Icons.broken_image, size: 32, color: Colors.white54),
+          ),
+        ),
+      );
+    }
+
     return CachedNetworkImage(
       imageUrl: url,
       fit: BoxFit.cover,

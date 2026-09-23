@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -524,7 +525,19 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
                               borderRadius: BorderRadius.circular(8),
                               child: Stack(
                                 children: [
-                                  CachedNetworkImage(
+                                  kIsWeb ? Image.network(
+                                    mediaUrl(_coverUrl),
+                                    height: 140,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (ctx, _, __) => Container(
+                                      height: 140,
+                                      color: Colors.grey[200],
+                                      child: const Center(
+                                        child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
+                                      ),
+                                    ),
+                                  ) : CachedNetworkImage(
                                     imageUrl: mediaUrl(_coverUrl),
                                     height: 140,
                                     width: double.infinity,
@@ -538,7 +551,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
                                       height: 140,
                                       color: Colors.grey[200],
                                       child: const Center(
-                                        child: Icon(Icons.broken_image, size: 36, color: Colors.grey),
+                                        child: Icon(Icons.broken_image, color: Colors.grey, size: 48),
                                       ),
                                     ),
                                   ),

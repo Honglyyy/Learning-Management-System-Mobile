@@ -43,4 +43,15 @@ class InstructorRepository {
     }
     return '';
   }
+  Future<String> uploadPhotoBytes(List<int> bytes, String filename) async {
+    final response = await _api.uploadBytes(
+      ApiEndpoints.instructorMePhoto,
+      bytes: bytes,
+      filename: filename,
+    );
+    if (response is Map && response.containsKey('url')) {
+      return response['url'].toString();
+    }
+    return '';
+  }
 }

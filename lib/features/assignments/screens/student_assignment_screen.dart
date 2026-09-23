@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -83,16 +84,24 @@ class _StudentAssignmentScreenState extends ConsumerState<StudentAssignmentScree
       allowedExtensions: ['pdf', 'doc', 'docx', 'zip', 'txt'],
     );
 
-    if (fileResult != null && fileResult.path != null) {
-      final file = File(fileResult.path!);
+    if (fileResult != null) {
       setState(() {
-        _selectedFile = file;
+        _selectedFile = kIsWeb || fileResult.path == null ? null : File(fileResult.path!);
         _isUploading = true;
       });
 
       try {
         final uploadRepo = ref.read(uploadRepositoryProvider);
-        final uploadRes = await uploadRepo.uploadAssignmentFile(file);
+        Map<String, String> uploadRes;
+        
+        if (kIsWeb) {
+          final bytes = await fileResult.readAsBytes();
+          uploadRes = await uploadRepo.uploadAssignmentFileBytes(bytes, fileResult.name);
+        } else {
+          final file = File(fileResult.path!);
+          uploadRes = await uploadRepo.uploadAssignmentFile(file);
+        }
+
         if (mounted) {
           setState(() {
             _uploadedFileUrl = uploadRes['url'];

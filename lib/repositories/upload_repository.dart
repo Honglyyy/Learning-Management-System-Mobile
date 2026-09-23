@@ -117,4 +117,23 @@ class UploadRepository {
     }
     return {'url': res.toString(), 'publicId': ''};
   }
+  Future<Map<String, String>> uploadAssignmentFileBytes(
+    List<int> bytes,
+    String filename, {
+    ProgressCallback? onSendProgress,
+  }) async {
+    final res = await _api.uploadBytes(
+      ApiEndpoints.uploadAssignmentFile,
+      bytes: bytes,
+      filename: filename,
+      onSendProgress: onSendProgress,
+    );
+    if (res is Map) {
+      return {
+        'url': res['url']?.toString() ?? '',
+        'publicId': res['publicId']?.toString() ?? '',
+      };
+    }
+    return {'url': res.toString(), 'publicId': ''};
+  }
 }

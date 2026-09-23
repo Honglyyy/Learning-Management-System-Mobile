@@ -97,8 +97,13 @@ class _StudentProfileScreenState extends ConsumerState<StudentProfileScreen> {
 
     setState(() => _isUploadingPhoto = true);
     try {
-      final file = File(picked.path);
-      await ref.read(studentRepositoryProvider).uploadPhoto(file);
+      if (kIsWeb) {
+        final bytes = await picked.readAsBytes();
+        await ref.read(studentRepositoryProvider).uploadPhotoBytes(bytes, picked.name);
+      } else {
+        final file = File(picked.path);
+        await ref.read(studentRepositoryProvider).uploadPhoto(file);
+      }
       ToastService.showSuccess('Profile photo updated');
       _loadProfile();
     } catch (e) {

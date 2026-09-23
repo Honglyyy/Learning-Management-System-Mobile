@@ -11,6 +11,7 @@ import '../features/auth/screens/reset_password_screen.dart';
 import '../features/auth/screens/verify_otp_screen.dart';
 import '../features/certificates/screens/verify_certificate_screen.dart';
 import '../features/courses/screens/catalog_screen.dart';
+import '../features/courses/screens/wishlist_screen.dart';
 import '../features/courses/screens/course_detail_screen.dart';
 import '../features/courses/screens/lesson_player_screen.dart';
 import '../features/courses/screens/quiz_player_screen.dart';
@@ -115,6 +116,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       // Standalone Fullscreen Routes
+      GoRoute(
+        path: '/wishlist',
+        builder: (context, state) => const WishlistScreen(),
+      ),
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),

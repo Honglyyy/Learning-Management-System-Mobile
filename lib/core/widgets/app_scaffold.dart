@@ -294,6 +294,13 @@ class AppScaffold extends ConsumerWidget {
               tooltip: isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
               onPressed: () => ref.read(themeModeProvider.notifier).toggle(),
             ),
+            // Wishlist (if authenticated)
+            if (isAuth)
+              IconButton(
+                icon: const Icon(Icons.favorite_border),
+                tooltip: 'Wishlist',
+                onPressed: () => context.push('/wishlist'),
+              ),
 
             // Notification Bell (if authenticated)
             if (isAuth)

@@ -37,7 +37,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
   List<CourseModel> _allCourses = [];
   List<CourseModel> _featuredCourses = [];
   List<CourseModel> _popularCourses = [];
-  List<CourseModel> _wishlistCourses = [];
   List<CategoryModel> _categories = [];
   ContinueLearningItem? _continueLearning;
 
@@ -47,7 +46,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() => _visibleCount = 6);
@@ -81,10 +80,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
         courseRepo.getPopular().catchError((_) => <CourseModel>[]),
         categoryRepo.getCategories().catchError((_) => <CategoryModel>[]),
         if (authRepo.isAuthenticated)
-          courseRepo.getFavorites().catchError((_) => <CourseModel>[])
-        else
-          Future.value(<CourseModel>[]),
-        if (authRepo.isAuthenticated)
           enrollmentRepo.getContinueLearning().catchError((_) => null)
         else
           Future.value(null),
@@ -96,8 +91,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
           _featuredCourses = results[1] as List<CourseModel>;
           _popularCourses = results[2] as List<CourseModel>;
           _categories = results[3] as List<CategoryModel>;
-          _wishlistCourses = results[4] as List<CourseModel>;
-          _continueLearning = results[5] as ContinueLearningItem?;
+          _continueLearning = results[4] as ContinueLearningItem?;
           _isLoading = false;
         });
       }
@@ -203,9 +197,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
         break;
       case 2:
         baseList = _popularCourses;
-        break;
-      case 3:
-        baseList = _wishlistCourses;
         break;
       default:
         baseList = _allCourses;
@@ -336,6 +327,8 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
   }
 
   Widget _buildFilterBar() {
+    final activeFilters = _selectedLevel != null || _selectedMinRating != null || _selectedDuration != null || _selectedSort != null;
+
     return Column(
       children: [
         Row(
@@ -366,114 +359,178 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
               tooltip: _isListView ? 'Switch to Grid View' : 'Switch to List View',
               onPressed: () => setState(() => _isListView = !_isListView),
             ),
+            const SizedBox(width: 4),
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  tooltip: 'Filters',
+                  onPressed: _showFilterBottomSheet,
+                ),
+                if (activeFilters)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ],
         ),
         const SizedBox(height: 8),
         _buildCategoryChips(),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            // Level
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: _selectedLevel,
-                decoration: const InputDecoration(
-                  labelText: 'Level',
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                ),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('All Levels')),
-                  DropdownMenuItem(value: 'BEGINNER', child: Text('Beginner')),
-                  DropdownMenuItem(value: 'INTERMEDIATE', child: Text('Intermediate')),
-                  DropdownMenuItem(value: 'ADVANCED', child: Text('Advanced')),
-                ],
-                onChanged: (val) {
-                  setState(() => _selectedLevel = val);
-                  _fetchFilteredCourses();
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Rating
-            Expanded(
-              child: DropdownButtonFormField<double>(
-                initialValue: _selectedMinRating,
-                decoration: const InputDecoration(
-                  labelText: 'Rating',
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                ),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('Any Rating')),
-                  DropdownMenuItem(value: 3.0, child: Text('3.0+ Stars')),
-                  DropdownMenuItem(value: 4.0, child: Text('4.0+ Stars')),
-                  DropdownMenuItem(value: 4.5, child: Text('4.5+ Stars')),
-                ],
-                onChanged: (val) {
-                  setState(() => _selectedMinRating = val);
-                  _fetchFilteredCourses();
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            // Duration
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: _selectedDuration,
-                decoration: const InputDecoration(
-                  labelText: 'Duration',
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                ),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('All Durations')),
-                  DropdownMenuItem(value: 'SHORT', child: Text('< 3 Hours')),
-                  DropdownMenuItem(value: 'MEDIUM', child: Text('3 - 10 Hours')),
-                  DropdownMenuItem(value: 'LONG', child: Text('10+ Hours')),
-                ],
-                onChanged: (val) {
-                  setState(() => _selectedDuration = val);
-                  _fetchFilteredCourses();
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Sort
-            Expanded(
-              child: DropdownButtonFormField<String>(
-                initialValue: _selectedSort,
-                decoration: const InputDecoration(
-                  labelText: 'Sort By',
-                  isDense: true,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                ),
-                items: const [
-                  DropdownMenuItem(value: null, child: Text('Default')),
-                  DropdownMenuItem(value: 'POPULAR', child: Text('Most Popular')),
-                  DropdownMenuItem(value: 'RATING', child: Text('Highest Rated')),
-                  DropdownMenuItem(value: 'LATEST', child: Text('Latest Courses')),
-                ],
-                onChanged: (val) {
-                  setState(() => _selectedSort = val);
-                  _fetchFilteredCourses();
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-            // Reset
-            IconButton(
-              icon: const Icon(Icons.filter_alt_off_outlined, color: Colors.red),
-              tooltip: 'Reset Filters',
-              onPressed: _resetFilters,
-            ),
-          ],
-        ),
       ],
+    );
+  }
+
+  void _showFilterBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+                left: 16,
+                right: 16,
+                top: 16,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Filters',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          setModalState(() {
+                            _selectedLevel = null;
+                            _selectedMinRating = null;
+                            _selectedDuration = null;
+                            _selectedSort = null;
+                          });
+                          setState(() {});
+                          _fetchFilteredCourses();
+                        },
+                        child: const Text('Reset'),
+                      ),
+                    ],
+                  ),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  
+                  // Level
+                  const Text('Level', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedLevel,
+                    decoration: const InputDecoration(isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('All Levels')),
+                      DropdownMenuItem(value: 'BEGINNER', child: Text('Beginner')),
+                      DropdownMenuItem(value: 'INTERMEDIATE', child: Text('Intermediate')),
+                      DropdownMenuItem(value: 'ADVANCED', child: Text('Advanced')),
+                    ],
+                    onChanged: (val) {
+                      setModalState(() => _selectedLevel = val);
+                      setState(() {});
+                      _fetchFilteredCourses();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Rating
+                  const Text('Minimum Rating', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<double>(
+                    value: _selectedMinRating,
+                    decoration: const InputDecoration(isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('Any Rating')),
+                      DropdownMenuItem(value: 3.0, child: Text('3.0+ Stars')),
+                      DropdownMenuItem(value: 4.0, child: Text('4.0+ Stars')),
+                      DropdownMenuItem(value: 4.5, child: Text('4.5+ Stars')),
+                    ],
+                    onChanged: (val) {
+                      setModalState(() => _selectedMinRating = val);
+                      setState(() {});
+                      _fetchFilteredCourses();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Duration
+                  const Text('Duration', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedDuration,
+                    decoration: const InputDecoration(isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('All Durations')),
+                      DropdownMenuItem(value: 'SHORT', child: Text('< 3 Hours')),
+                      DropdownMenuItem(value: 'MEDIUM', child: Text('3 - 10 Hours')),
+                      DropdownMenuItem(value: 'LONG', child: Text('10+ Hours')),
+                    ],
+                    onChanged: (val) {
+                      setModalState(() => _selectedDuration = val);
+                      setState(() {});
+                      _fetchFilteredCourses();
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Sort By
+                  const Text('Sort By', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _selectedSort,
+                    decoration: const InputDecoration(isDense: true),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('Default')),
+                      DropdownMenuItem(value: 'POPULAR', child: Text('Most Popular')),
+                      DropdownMenuItem(value: 'RATING', child: Text('Highest Rated')),
+                      DropdownMenuItem(value: 'LATEST', child: Text('Latest Courses')),
+                    ],
+                    onChanged: (val) {
+                      setModalState(() => _selectedSort = val);
+                      setState(() {});
+                      _fetchFilteredCourses();
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Apply Filters'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -601,7 +658,6 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
                   Tab(text: 'All Courses'),
                   Tab(text: 'Featured'),
                   Tab(text: 'Popular'),
-                  Tab(text: 'Wishlist'),
                 ],
               ),
               const SizedBox(height: 16),

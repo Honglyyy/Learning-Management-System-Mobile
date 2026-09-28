@@ -44,6 +44,9 @@ class EnrollmentModel {
   final double progressPercent;
   final dynamic enrolledAt;
   final dynamic completedAt;
+  final dynamic expirationDate;
+  final bool isExpired;
+  final int? daysRemaining;
 
   EnrollmentModel({
     required this.enrollmentId,
@@ -60,9 +63,15 @@ class EnrollmentModel {
     this.progressPercent = 0.0,
     this.enrolledAt,
     this.completedAt,
+    this.expirationDate,
+    this.isExpired = false,
+    this.daysRemaining,
   });
 
   factory EnrollmentModel.fromJson(Map<String, dynamic> json) {
+    final statusStr = (json['status'] ?? 'ACTIVE').toString();
+    final expiredFlag = (json['isExpired'] as bool?) ?? (statusStr == 'EXPIRED');
+
     return EnrollmentModel(
       enrollmentId: json['enrollmentId'] as int? ?? json['id'] as int? ?? 0,
       userId: json['userId'] as int?,
@@ -72,7 +81,7 @@ class EnrollmentModel {
       courseTitle: json['courseTitle'] ?? json['title'] ?? '',
       courseCoverUrl: json['courseCoverUrl'] ?? json['coverUrl'],
       instructorName: json['instructorName'] ?? json['instructor'],
-      status: (json['status'] ?? 'ACTIVE').toString(),
+      status: statusStr,
       earnedPoints: json['earnedPoints'] as int? ?? 0,
       totalPoints: json['totalPoints'] as int? ?? 0,
       progressPercent: (json['progressPercent'] as num?)?.toDouble() ??
@@ -80,9 +89,14 @@ class EnrollmentModel {
           0.0,
       enrolledAt: json['enrolledAt'] ?? json['createdAt'],
       completedAt: json['completedAt'],
+      expirationDate: json['expirationDate'],
+      isExpired: expiredFlag,
+      daysRemaining: (json['daysRemaining'] as num?)?.toInt(),
     );
   }
 
-  bool get isCompleted => status == 'COMPLETED' || progressPercent >= 100.0;
-  bool get isActive => status == 'ACTIVE';
+  bool get isEnrollmentExpired => isExpired || status == 'EXPIRED';
+  bool get isCompleted => (status == 'COMPLETED' || progressPercent >= 100.0) && !isEnrollmentExpired;
+  bool get isActive => status == 'ACTIVE' && !isEnrollmentExpired;
+  bool get isExpiringSoon => daysRemaining != null && daysRemaining! <= 7 && daysRemaining! >= 0;
 }

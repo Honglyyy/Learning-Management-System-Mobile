@@ -7,6 +7,14 @@ class PaymentRepository {
 
   PaymentRepository(this._api);
 
+  Future<CheckoutQuoteModel> getCheckoutQuote(int courseId) async {
+    final response = await _api.get(
+      ApiEndpoints.paymentsCheckoutQuote,
+      queryParameters: {'courseId': courseId},
+    );
+    return CheckoutQuoteModel.fromJson(response as Map<String, dynamic>);
+  }
+
   Future<CheckoutResponse> checkout(
     int courseId, {
     String provider = 'ABA_PAYWAY',

@@ -33,6 +33,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   List<int> _completedLessonIds = [];
   double _progressPercent = 0.0;
   bool _isEnrolled = false;
+  bool _isExpired = false;
+  bool _hasReEnrollmentDiscount = false;
+  num? _discountedPrice;
+  dynamic _expirationDate;
+  int? _daysRemaining;
 
   bool _isLoading = true;
   String? _error;
@@ -80,6 +85,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
       final reviews = await courseRepo.getReviews(widget.courseId).catchError((_) => <CourseReview>[]);
 
       bool isEnrolled = false;
+      bool isExpired = course.isExpired;
+      bool hasReEnrollmentDiscount = course.hasReEnrollmentDiscount;
+      num? discountedPrice = course.discountedPrice ?? (course.price * 0.5);
+      dynamic expirationDate = course.expirationDate;
+      int? daysRemaining;
       double progress = 0.0;
       List<int> completedIds = [];
 
@@ -88,11 +98,30 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
           final myEnrollments = await ref.read(enrollmentRepositoryProvider).getMyEnrollments();
           final matching = myEnrollments.where((e) => e.courseId == widget.courseId).toList();
           if (matching.isNotEmpty) {
-            isEnrolled = true;
-            progress = matching.first.progressPercent;
-            completedIds = await courseRepo.getLessonsStatus(widget.courseId).catchError((_) => <int>[]);
+            final enrollment = matching.first;
+            if (enrollment.isEnrollmentExpired) {
+              isExpired = true;
+            }
+            if (!isExpired && (enrollment.isActive || enrollment.isCompleted)) {
+              isEnrolled = true;
+            }
+            if (enrollment.expirationDate != null) {
+              expirationDate = enrollment.expirationDate;
+            }
+            daysRemaining = enrollment.daysRemaining;
+            progress = enrollment.progressPercent;
+            if (isEnrolled) {
+              completedIds = await courseRepo.getLessonsStatus(widget.courseId).catchError((_) => <int>[]);
+            }
           }
         } catch (_) {}
+      }
+
+      if (course.isEnrolled && !isExpired) {
+        isEnrolled = true;
+      }
+      if (isExpired && course.price > 0) {
+        hasReEnrollmentDiscount = true;
       }
 
       if (mounted) {
@@ -101,6 +130,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
           _assignments = assignments;
           _reviews = reviews;
           _isEnrolled = isEnrolled;
+          _isExpired = isExpired;
+          _hasReEnrollmentDiscount = hasReEnrollmentDiscount;
+          _discountedPrice = discountedPrice;
+          _expirationDate = expirationDate;
+          _daysRemaining = daysRemaining;
           _progressPercent = progress;
           _completedLessonIds = completedIds;
           _isLoading = false;
@@ -131,6 +165,16 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
       _loadCourseData();
     } catch (e) {
       ToastService.showError(e.toString());
+    }
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return '';
+    try {
+      final parsed = DateTime.parse(date.toString());
+      return '${parsed.year}-${parsed.month.toString().padLeft(2, '0')}-${parsed.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return date.toString();
     }
   }
 
@@ -231,9 +275,11 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  isCourseFree
-                      ? 'This lesson is locked. Enroll in this free course to unlock all lessons.'
-                      : 'This lesson is locked. Purchase the full course to get instant access to all video lessons, quizzes, and certificates.',
+                  _isExpired
+                      ? 'Your access to this course has passed its expiration date. Re-enroll now with your exclusive 50% returning student discount to regain full access to all lessons and materials.'
+                      : isCourseFree
+                          ? 'This lesson is locked. Enroll in this free course to unlock all lessons.'
+                          : 'This lesson is locked. Purchase the full course to get instant access to all video lessons, quizzes, and certificates.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 13,
@@ -256,9 +302,9 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Full Course Access',
-                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            Text(
+                              _isExpired ? 'Returning Student Renewal' : 'Full Course Access',
+                              style: const TextStyle(fontSize: 12, color: Colors.grey),
                             ),
                             Text(
                               _course!.title,
@@ -273,14 +319,51 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text(
-                        isCourseFree ? 'Free' : Formatters.formatCurrency(_course!.price),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: theme.colorScheme.primary,
+                      if (_isExpired)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              Formatters.formatCurrency(_course!.price),
+                              style: TextStyle(
+                                decoration: TextDecoration.lineThrough,
+                                fontSize: 12,
+                                color: theme.hintColor,
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5)),
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: theme.colorScheme.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text('-50%', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
+                                ),
+                              ],
+                            ),
+                          ],
+                        )
+                      else
+                        Text(
+                          isCourseFree ? 'Free' : Formatters.formatCurrency(_course!.price),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -303,21 +386,27 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                         return;
                       }
 
-                      if (isCourseFree) {
+                      if (isCourseFree || (_isExpired && (_discountedPrice ?? 1) == 0)) {
                         _handleFreeEnroll();
                       } else {
                         AbaPayWayDialog.show(
                           context,
                           courseId: _course!.courseId,
                           courseTitle: _course!.title,
-                          price: _course!.price,
+                          price: _isExpired ? (_discountedPrice ?? (_course!.price * 0.5)) : _course!.price,
+                          originalPrice: _course!.price,
+                          isReEnrollment: _isExpired,
                         );
                       }
                     },
                     child: Text(
-                      isCourseFree
-                          ? 'Enroll Now (Free)'
-                          : 'Pay to Unlock • ${Formatters.formatCurrency(_course!.price)}',
+                      _isExpired
+                          ? (_course!.isFree || (_discountedPrice ?? 1) == 0)
+                              ? 'Renew Access (Free)'
+                              : 'Renew Access (50% Off) • ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}'
+                          : isCourseFree
+                              ? 'Enroll Now (Free)'
+                              : 'Pay to Unlock • ${Formatters.formatCurrency(_course!.price)}',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                   ),
@@ -345,6 +434,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         ),
       );
     }
+
+    final allLessons = _course!.sections.expand((s) => s.lessons).toList();
 
     return ListView.builder(
       shrinkWrap: true,
@@ -381,8 +472,19 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                     ),
                   ]
                 : sec.lessons.map((lesson) {
-              final isUnlocked = _isEnrolled || lesson.isFree;
+              final lessonIndex = allLessons.indexWhere((l) => l.lessonId == lesson.lessonId);
               final isDone = _completedLessonIds.contains(lesson.lessonId);
+
+              final LessonModel? previousLesson = lessonIndex > 0 ? allLessons[lessonIndex - 1] : null;
+              final bool isPreviousDone = lessonIndex == 0 ||
+                  (previousLesson != null && _completedLessonIds.contains(previousLesson.lessonId));
+
+              // When enrolled, a lesson is unlocked only if it's already done OR the previous lesson is done
+              // When not enrolled, a lesson is previewable if marked free
+              final bool isLockedByPrerequisite = _isEnrolled && !_isExpired && !isDone && !isPreviousDone;
+              final bool isUnlocked = (_isEnrolled && !_isExpired)
+                  ? (isDone || isPreviousDone)
+                  : lesson.isFree;
 
               return ListTile(
                 dense: true,
@@ -407,10 +509,15 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                   ),
                 ),
                 subtitle: Text(
-                  lesson.duration ?? 'Video lesson',
-                  style: const TextStyle(fontSize: 11),
+                  isLockedByPrerequisite && previousLesson != null
+                      ? '${lesson.duration ?? "Video lesson"} • Complete "${previousLesson.title}" first'
+                      : (lesson.duration ?? 'Video lesson'),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isLockedByPrerequisite ? Colors.amber.shade700 : null,
+                  ),
                 ),
-                trailing: lesson.isFree
+                trailing: lesson.isFree && (!_isEnrolled || isUnlocked)
                     ? Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
@@ -422,10 +529,34 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                           style: TextStyle(fontSize: 10, color: Colors.green, fontWeight: FontWeight.bold),
                         ),
                       )
-                    : null,
-                onTap: () {
+                    : isLockedByPrerequisite
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.lock, size: 10, color: Colors.grey),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Locked',
+                                  style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          )
+                        : null,
+                onTap: () async {
                   if (isUnlocked) {
-                    context.push('/courses/${widget.courseId}/lessons/${lesson.lessonId}');
+                    await context.push('/courses/${widget.courseId}/lessons/${lesson.lessonId}');
+                    if (mounted) {
+                      _loadCourseData();
+                    }
+                  } else if (isLockedByPrerequisite && previousLesson != null) {
+                    ToastService.showInfo('Please complete "${previousLesson.title}" first to unlock this lesson.');
                   } else {
                     _showPayToUnlockSheet(lesson);
                   }
@@ -462,7 +593,14 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
               style: const TextStyle(fontSize: 12),
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.push('/assignments/${a.assignmentId}'),
+            onTap: () {
+              final authRepo = ref.read(authRepositoryProvider);
+              if (!authRepo.isAuthenticated) {
+                context.push('/login');
+                return;
+              }
+              context.push('/assignments/${a.assignmentId}');
+            },
           ),
         );
       },
@@ -634,63 +772,146 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         ],
       ),
       child: SafeArea(
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
-                const Text('Price', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                Text(
-                  Formatters.formatCurrency(_course!.price),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: theme.colorScheme.primary,
-                  ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Price', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    if (_isExpired) ...[
+                      Row(
+                        children: [
+                          Text(
+                            Formatters.formatCurrency(_course!.price),
+                            style: TextStyle(
+                              decoration: TextDecoration.lineThrough,
+                              fontSize: 12,
+                              color: theme.hintColor,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text('-50%', style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5)),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ] else
+                      Text(
+                        _course!.isFree ? 'Free' : Formatters.formatCurrency(_course!.price),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          color: _course!.isFree ? Colors.green : theme.colorScheme.primary,
+                        ),
+                      ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _isEnrolled
-                  ? _progressPercent >= 100.0
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _isExpired
                       ? ElevatedButton.icon(
-                          icon: const Icon(Icons.verified, size: 18),
-                          label: const Text('Claim Certificate'),
+                          icon: const Icon(Icons.replay, size: 18),
+                          label: Text(
+                            (_discountedPrice ?? (_course!.price * 0.5)) == 0 || _course!.isFree
+                                ? 'Renew Access (Free)'
+                                : 'Renew Access (50% Off) — ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: theme.colorScheme.primary,
                             foregroundColor: Colors.white,
                           ),
-                          onPressed: _handleClaimCertificate,
-                        )
-                      : ElevatedButton(
                           onPressed: () {
-                            if (_course!.sections.isNotEmpty &&
-                                _course!.sections.first.lessons.isNotEmpty) {
-                              context.push(
-                                '/courses/${widget.courseId}/lessons/${_course!.sections.first.lessons.first.lessonId}',
+                            final authRepo = ref.read(authRepositoryProvider);
+                            if (!authRepo.isAuthenticated) {
+                              context.push('/login');
+                              return;
+                            }
+                            if (_course!.isFree || (_discountedPrice ?? 1) == 0) {
+                              _handleFreeEnroll();
+                            } else {
+                              AbaPayWayDialog.show(
+                                context,
+                                courseId: _course!.courseId,
+                                courseTitle: _course!.title,
+                                price: _discountedPrice ?? (_course!.price * 0.5),
+                                originalPrice: _course!.price,
+                                isReEnrollment: true,
                               );
                             }
                           },
-                          child: Text('Continue Learning (${Formatters.formatProgress(_progressPercent)})'),
                         )
-                  : ElevatedButton(
-                      onPressed: () {
-                        if (_course!.isFree) {
-                          _handleFreeEnroll();
-                        } else {
-                          AbaPayWayDialog.show(
-                            context,
-                            courseId: _course!.courseId,
-                            courseTitle: _course!.title,
-                            price: _course!.price,
-                          );
-                        }
-                      },
-                      child: Text(_course!.isFree ? 'Enroll Now (Free)' : 'Buy Now'),
-                    ),
+                      : _isEnrolled
+                          ? _progressPercent >= 100.0
+                              ? ElevatedButton.icon(
+                                  icon: const Icon(Icons.verified, size: 18),
+                                  label: const Text('Claim Certificate'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: _handleClaimCertificate,
+                                )
+                              : ElevatedButton(
+                                  onPressed: () {
+                                    if (_course!.sections.isNotEmpty &&
+                                        _course!.sections.first.lessons.isNotEmpty) {
+                                      context.push(
+                                        '/courses/${widget.courseId}/lessons/${_course!.sections.first.lessons.first.lessonId}',
+                                      );
+                                    }
+                                  },
+                                  child: Text('Continue Learning (${Formatters.formatProgress(_progressPercent)})'),
+                                )
+                          : ElevatedButton(
+                              onPressed: () {
+                                final authRepo = ref.read(authRepositoryProvider);
+                                if (!authRepo.isAuthenticated) {
+                                  context.push('/login');
+                                  return;
+                                }
+                                if (_course!.isFree) {
+                                  _handleFreeEnroll();
+                                } else {
+                                  AbaPayWayDialog.show(
+                                    context,
+                                    courseId: _course!.courseId,
+                                    courseTitle: _course!.title,
+                                    price: _course!.price,
+                                  );
+                                }
+                              },
+                              child: Text(_course!.isFree ? 'Enroll Now (Free)' : 'Buy Now'),
+                            ),
+                ),
+              ],
             ),
+            if (_isExpired) ...[
+              const SizedBox(height: 6),
+              const Text(
+                '50% re-enrollment discount automatically applied for returning students',
+                style: TextStyle(fontSize: 10, color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ],
         ),
       ),
@@ -955,13 +1176,144 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                         ),
                       ),
                       const SizedBox(width: 8),
-                      if (c.overallDuration != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.1),
+                          border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.schedule, size: 12, color: Colors.amber),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${c.accessDurationDays} Days Access',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber[900],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (c.overallDuration != null) ...[
+                        const SizedBox(width: 8),
                         Text(
                           c.overallDuration!,
                           style: TextStyle(fontSize: 12, color: theme.hintColor),
                         ),
+                      ],
                     ],
                   ),
+                  if (_isExpired) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(Icons.history, color: Colors.amber, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Text(
+                                      'Course Access Expired',
+                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'Expired',
+                                        style: TextStyle(fontSize: 10, color: Colors.red, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Your enrollment access has passed its expiration date. You can re-enroll now to regain full access to all lessons, quizzes, and materials with your exclusive 50% returning student discount!',
+                                  style: TextStyle(fontSize: 12, height: 1.3),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (_isEnrolled && _expirationDate != null) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: (_daysRemaining != null && _daysRemaining! <= 7 && _daysRemaining! >= 0)
+                            ? Colors.amber.withValues(alpha: 0.12)
+                            : theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: (_daysRemaining != null && _daysRemaining! <= 7 && _daysRemaining! >= 0)
+                              ? Colors.amber.withValues(alpha: 0.4)
+                              : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.schedule,
+                            size: 14,
+                            color: (_daysRemaining != null && _daysRemaining! <= 7 && _daysRemaining! >= 0)
+                                ? Colors.amber[800]
+                                : theme.hintColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Access valid until: ${_formatDate(_expirationDate)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: (_daysRemaining != null && _daysRemaining! <= 7 && _daysRemaining! >= 0)
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                              color: (_daysRemaining != null && _daysRemaining! <= 7 && _daysRemaining! >= 0)
+                                  ? Colors.amber[900]
+                                  : null,
+                            ),
+                          ),
+                          if (_daysRemaining != null && _daysRemaining! <= 7 && _daysRemaining! >= 0) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                _daysRemaining == 0 ? 'Expires today' : '$_daysRemaining days left',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber[900]),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Text(
                     c.title,

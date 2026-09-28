@@ -44,6 +44,8 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
   bool _isLoading = true;
   bool _isMarkingComplete = false;
   bool _hasShownCompletionPrompt = false;
+  bool _isLockedByPrerequisite = false;
+  LessonModel? _prerequisiteLesson;
   String? _error;
 
   @override
@@ -126,7 +128,25 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
         }
       }
 
-      final isUnlocked = isEnrolled || (lesson?.isFree == true);
+      bool isLockedByPrerequisite = false;
+      LessonModel? prerequisiteLesson;
+
+      if (isEnrolled && lesson != null && course != null) {
+        final allLessons = course.sections.expand((s) => s.lessons).toList();
+        final currentIdx = allLessons.indexWhere((l) => l.lessonId == lesson!.lessonId);
+        if (currentIdx > 0) {
+          final prev = allLessons[currentIdx - 1];
+          final completedIds = await ref.read(courseRepositoryProvider).getLessonsStatus(widget.courseId).catchError((_) => <int>[]);
+          final isCurrentDone = completedIds.contains(lesson.lessonId);
+          final isPrevDone = completedIds.contains(prev.lessonId);
+          if (!isCurrentDone && !isPrevDone) {
+            isLockedByPrerequisite = true;
+            prerequisiteLesson = prev;
+          }
+        }
+      }
+
+      final isUnlocked = (isEnrolled && !isLockedByPrerequisite) || (!isEnrolled && lesson?.isFree == true);
 
       LessonNavigation? nav;
       LessonProgress? progress;
@@ -153,6 +173,8 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
           _progress = progress;
           _materials = materials;
           _quiz = quiz;
+          _isLockedByPrerequisite = isLockedByPrerequisite;
+          _prerequisiteLesson = prerequisiteLesson;
           _isLoading = false;
         });
 
@@ -785,7 +807,63 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
     }
 
     final lesson = _lesson!;
-    final isUnlocked = _isEnrolled || lesson.isFree;
+    final isUnlocked = (_isEnrolled && !_isLockedByPrerequisite) || (!_isEnrolled && lesson.isFree);
+
+    if (_isLockedByPrerequisite && _prerequisiteLesson != null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(lesson.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go('/courses/${widget.courseId}'),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.lock_clock_outlined, size: 56, color: Colors.amber),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Lesson Locked',
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'You must complete the previous lesson "${_prerequisiteLesson!.title}" before accessing this lesson.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: theme.hintColor, fontSize: 14),
+                ),
+                const SizedBox(height: 28),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.play_arrow),
+                  label: Text('Go to "${_prerequisiteLesson!.title}"'),
+                  onPressed: () {
+                    context.pushReplacement(
+                      '/courses/${widget.courseId}/lessons/${_prerequisiteLesson!.lessonId}',
+                    );
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  onPressed: () => context.go('/courses/${widget.courseId}'),
+                  child: const Text('Back to Course Curriculum'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     if (!isUnlocked) {
       return Scaffold(
@@ -987,15 +1065,36 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
                       //   - If next lesson is locked: shows locked button and opens paywall dialog!
                       if (_isEnrolled)
                         ElevatedButton.icon(
-                          icon: const Icon(Icons.arrow_forward, size: 16),
-                          label: const Text('Next Lesson'),
-                          onPressed: nextLesson != null
-                              ? () {
-                                  context.pushReplacement(
-                                    '/courses/${widget.courseId}/lessons/${nextLesson.lessonId}',
-                                  );
-                                }
+                          icon: Icon(
+                            _progress?.isCompleted == true ? Icons.arrow_forward : Icons.lock_outline,
+                            size: 16,
+                          ),
+                          label: Text(
+                            nextLesson == null
+                                ? 'Next Lesson'
+                                : _progress?.isCompleted == true
+                                    ? 'Next Lesson'
+                                    : 'Next Lesson (Locked)',
+                          ),
+                          style: _progress?.isCompleted != true && nextLesson != null
+                              ? ElevatedButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                                  foregroundColor: theme.colorScheme.onSurfaceVariant,
+                                )
                               : null,
+                          onPressed: nextLesson == null
+                              ? null
+                              : _progress?.isCompleted == true
+                                  ? () {
+                                      context.pushReplacement(
+                                        '/courses/${widget.courseId}/lessons/${nextLesson.lessonId}',
+                                      );
+                                    }
+                                  : () {
+                                      ToastService.showInfo(
+                                        'Please complete this lesson before proceeding to the next lesson.',
+                                      );
+                                    },
                         )
                       else if (nextLesson == null)
                         ElevatedButton.icon(

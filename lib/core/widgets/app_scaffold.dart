@@ -76,10 +76,10 @@ class AppScaffold extends ConsumerWidget {
       return 0;
     }
 
-    // STUDENT / USER: 0: Home, 1: Search, 2: My Courses, 3: Notifications, 4: Profile
+    // STUDENT / USER: 0: Home, 1: Search, 2: My Courses, 3: Instructors, 4: Profile
     if (path.startsWith('/catalog') || path.startsWith('/search')) return 1;
     if (path.startsWith('/my/enrollments')) return 2;
-    if (path.startsWith('/notifications')) return 3;
+    if (path.startsWith('/instructors')) return 3;
     if (path.startsWith('/profile') || path.startsWith('/my/payments')) return 4;
     return 0;
   }
@@ -151,7 +151,7 @@ class AppScaffold extends ConsumerWidget {
         context.go('/my/enrollments');
         break;
       case 3:
-        context.go('/notifications');
+        context.go('/instructors');
         break;
       case 4:
         context.go('/profile');
@@ -217,18 +217,10 @@ class AppScaffold extends ConsumerWidget {
           activeIcon: Icon(Icons.school),
           label: 'My Courses',
         ),
-        BottomNavigationBarItem(
-          icon: Badge(
-            isLabelVisible: unreadCount > 0,
-            label: Text('$unreadCount'),
-            child: const Icon(Icons.notifications_outlined),
-          ),
-          activeIcon: Badge(
-            isLabelVisible: unreadCount > 0,
-            label: Text('$unreadCount'),
-            child: const Icon(Icons.notifications),
-          ),
-          label: 'Notification',
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.people_outline),
+          activeIcon: Icon(Icons.people),
+          label: 'Instructors',
         ),
         const BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),

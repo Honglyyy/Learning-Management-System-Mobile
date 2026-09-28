@@ -97,6 +97,7 @@ class ApiEndpoints {
 
   // Payments
   static const String paymentsCheckout = '/api/payments/checkout';
+  static const String paymentsCheckoutQuote = '/api/payments/checkout/quote';
   static String paymentConfirm(int paymentId) => '/api/payments/$paymentId/confirm';
   static const String paymentsMe = '/api/payments/me';
   static const String payments = '/api/payments';

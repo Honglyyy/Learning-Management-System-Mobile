@@ -15,6 +15,10 @@ class CourseCardItem {
   final String? duration;
   final int? enrollmentCount;
   final bool isFavorite;
+  final int? accessDurationDays;
+  final bool isExpired;
+  final num? discountedPrice;
+  final bool isEnrolled;
 
   CourseCardItem({
     required this.courseId,
@@ -27,6 +31,10 @@ class CourseCardItem {
     this.duration,
     this.enrollmentCount,
     this.isFavorite = false,
+    this.accessDurationDays,
+    this.isExpired = false,
+    this.discountedPrice,
+    this.isEnrolled = false,
   });
 }
 
@@ -74,6 +82,17 @@ class CourseCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
+                          if (course.isExpired) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text('EXPIRED', style: TextStyle(fontSize: 9, color: Colors.red, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 6),
+                          ],
                           if (course.level != null) ...[
                             _buildLevelChip(theme, course.level!),
                             const SizedBox(width: 8),
@@ -122,15 +141,41 @@ class CourseCard extends StatelessWidget {
                               style: TextStyle(fontSize: 11, color: theme.hintColor),
                             ),
                           ],
-                          const Spacer(),
+                          const SizedBox(width: 8),
+                          Icon(Icons.timer_outlined, size: 12, color: theme.hintColor),
+                          const SizedBox(width: 3),
                           Text(
-                            Formatters.formatCurrency(course.price),
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: theme.colorScheme.primary,
-                            ),
+                            '${course.accessDurationDays ?? 180}d',
+                            style: TextStyle(fontSize: 11, color: theme.hintColor),
                           ),
+                          const Spacer(),
+                          if (course.isExpired) ...[
+                            Text(
+                              Formatters.formatCurrency(course.price),
+                              style: TextStyle(
+                                decoration: TextDecoration.lineThrough,
+                                fontSize: 11,
+                                color: theme.hintColor,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              Formatters.formatCurrency(course.discountedPrice ?? ((course.price ?? 0) * 0.5)),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          ] else
+                            Text(
+                              Formatters.formatCurrency(course.price),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -153,7 +198,7 @@ class CourseCard extends StatelessWidget {
             Stack(
               children: [
                 SizedBox(
-                  height: 120,
+                  height: 105,
                   width: double.infinity,
                   child: _buildCoverImage(imageUrl),
                 ),
@@ -177,6 +222,19 @@ class CourseCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                if (course.isExpired)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text('EXPIRED', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
                 if (course.level != null)
                   Positioned(
                     bottom: 8,
@@ -186,7 +244,7 @@ class CourseCard extends StatelessWidget {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -194,25 +252,25 @@ class CourseCard extends StatelessWidget {
                     course.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   if (course.instructor != null)
                     Text(
                       course.instructor!,
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 5),
                   Row(
                     children: [
                       _buildRating(course.rating),
                       if (course.enrollmentCount != null) ...[
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 4),
                         Text(
                           '(${course.enrollmentCount})',
                           style: TextStyle(
@@ -221,26 +279,70 @@ class CourseCard extends StatelessWidget {
                           ),
                         ),
                       ],
+                      const Spacer(),
                       if (course.duration != null && course.duration!.isNotEmpty) ...[
-                        const Spacer(),
                         Icon(Icons.schedule, size: 11, color: theme.hintColor),
                         const SizedBox(width: 2),
                         Text(
                           course.duration!,
                           style: TextStyle(fontSize: 10, color: theme.hintColor),
                         ),
+                        if (course.accessDurationDays != null) const SizedBox(width: 4),
+                      ],
+                      if (course.duration == null || course.duration!.isEmpty || course.accessDurationDays != null) ...[
+                        Icon(Icons.timer_outlined, size: 11, color: theme.hintColor),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${course.accessDurationDays ?? 180}d',
+                          style: TextStyle(fontSize: 10, color: theme.hintColor),
+                        ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    Formatters.formatCurrency(course.price),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: theme.colorScheme.primary,
+                  const SizedBox(height: 5),
+                  if (course.isExpired)
+                    Row(
+                      children: [
+                        Text(
+                          Formatters.formatCurrency(course.price),
+                          style: TextStyle(
+                            decoration: TextDecoration.lineThrough,
+                            fontSize: 11,
+                            color: theme.hintColor,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          Formatters.formatCurrency(course.discountedPrice ?? ((course.price ?? 0) * 0.5)),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            '-50%',
+                            style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    Text(
+                      Formatters.formatCurrency(course.price),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14.5,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

@@ -42,7 +42,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
 
       // Instructor route guard
-      if (path.startsWith('/instructor')) {
+      if (path.startsWith('/instructor') && !path.startsWith('/instructors')) {
         if (!isAuth) return '/login?reason=unauthorized';
         if (role != 'INSTRUCTOR' && role != 'ADMIN') return '/';
       }
@@ -72,11 +72,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/catalog',
-            builder: (context, state) => const CatalogScreen(),
+            builder: (context, state) => CatalogScreen(
+              initialQuery: state.uri.queryParameters['query'],
+              initialCategoryId: int.tryParse(state.uri.queryParameters['categoryId'] ?? ''),
+            ),
           ),
           GoRoute(
             path: '/search',
-            builder: (context, state) => const CatalogScreen(),
+            builder: (context, state) => CatalogScreen(
+              initialQuery: state.uri.queryParameters['query'],
+              initialCategoryId: int.tryParse(state.uri.queryParameters['categoryId'] ?? ''),
+            ),
           ),
           GoRoute(
             path: '/my/enrollments',

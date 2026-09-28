@@ -54,14 +54,12 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 
   Future<void> _markRead(NotificationItem item) async {
     if (item.isRead) {
-      _handleAction(item.actionUrl);
       return;
     }
 
     try {
       await ref.read(notificationRepositoryProvider).markRead(item.id);
       _loadNotifications();
-      _handleAction(item.actionUrl);
     } catch (e) {
       ToastService.showError(e.toString());
     }
@@ -137,7 +135,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                 ),
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(10),
-                                  onTap: () => _markRead(item),
+                                  onTap: item.isRead ? null : () => _markRead(item),
                                   child: Padding(
                                     padding: const EdgeInsets.all(14.0),
                                     child: Row(

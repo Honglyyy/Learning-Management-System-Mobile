@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers.dart';
 import '../../../core/utils/media_url.dart';
+import 'package:go_router/go_router.dart';
 import '../../../core/widgets/api_alert.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../models/instructor_model.dart';
@@ -98,8 +99,13 @@ class _InstructorDirectoryScreenState extends ConsumerState<InstructorDirectoryS
 
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 12),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(16.0),
+                                child: InkWell(
+                                  onTap: () {
+                                    context.push('/catalog?query=${Uri.encodeComponent(inst.fullName)}');
+                                  },
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
@@ -183,6 +189,7 @@ class _InstructorDirectoryScreenState extends ConsumerState<InstructorDirectoryS
                                       ],
                                     ],
                                   ),
+                                ),
                                 ),
                               );
                             },

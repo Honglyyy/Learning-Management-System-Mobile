@@ -380,6 +380,7 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                           items: const [
                             DropdownMenuItem(value: 'ACTIVE', child: Text('ACTIVE', style: TextStyle(fontSize: 11))),
                             DropdownMenuItem(value: 'COMPLETED', child: Text('COMPLETED', style: TextStyle(fontSize: 11))),
+                            DropdownMenuItem(value: 'EXPIRED', child: Text('EXPIRED', style: TextStyle(fontSize: 11))),
                             DropdownMenuItem(value: 'CANCELLED', child: Text('CANCELLED', style: TextStyle(fontSize: 11))),
                           ],
                           onChanged: (newStatus) async {
@@ -572,11 +573,13 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                           CrudFieldDef(name: 'description', label: 'Description', type: CrudFieldType.textarea),
                           CrudFieldDef(name: 'price', label: 'Price (USD)', type: CrudFieldType.number),
                           CrudFieldDef(name: 'overallDuration', label: 'Duration'),
+                          CrudFieldDef(name: 'accessDurationDays', label: 'Access (Days)', type: CrudFieldType.number),
                           CrudFieldDef(name: 'instructorId', label: 'Instructor ID', type: CrudFieldType.number),
                         ],
                         [
                           CrudColumnDef(key: 'title', label: 'Title'),
                           CrudColumnDef(key: 'price', label: 'Price', render: (row) => Text(Formatters.formatCurrency(row['price']))),
+                          CrudColumnDef(key: 'accessDurationDays', label: 'Access', render: (row) => Text('${row['accessDurationDays'] ?? 180}d')),
                           CrudColumnDef(key: 'status', label: 'Status'),
                         ],
                       ),

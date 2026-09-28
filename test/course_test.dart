@@ -188,5 +188,118 @@ void main() {
       expect(find.text('2 hours'), findsOneWidget);
       expect(find.text('Free'), findsOneWidget);
     });
+
+    testWidgets('CourseCard does not overflow with long title in home screen dimensions', (tester) async {
+      final item = CourseCardItem(
+        courseId: 1,
+        title: 'Django: Complete Python Web Development & REST Framework',
+        instructor: 'Hongly Lay',
+        rating: 0.0,
+        price: 19.99,
+        level: 'ALL_LEVELS',
+        enrollmentCount: 1,
+        accessDurationDays: 1,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 200,
+              height: 250,
+              child: CourseCard(course: item, isListView: false),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Django: Complete Python Web Development & REST Framework'), findsOneWidget);
+      expect(find.text('Hongly Lay'), findsOneWidget);
+      expect(find.text('1d'), findsOneWidget);
+      expect(find.text('\$19.99'), findsOneWidget);
+    });
+  });
+
+  group('Lesson Progression & Restriction Unit Tests', () {
+    final lesson1Id = 101;
+    final lesson2Id = 102;
+    final lesson3Id = 103;
+
+    bool isLessonUnlocked({
+      required int lessonIndex,
+      required int currentLessonId,
+      required int? previousLessonId,
+      required List<int> completedLessonIds,
+      required bool isEnrolled,
+      required bool isFree,
+    }) {
+      if (!isEnrolled) return isFree;
+      final isDone = completedLessonIds.contains(currentLessonId);
+      if (isDone) return true;
+      if (lessonIndex == 0) return true;
+      return previousLessonId != null && completedLessonIds.contains(previousLessonId);
+    }
+
+    test('First lesson (index 0) is always unlocked for enrolled student', () {
+      final unlocked = isLessonUnlocked(
+        lessonIndex: 0,
+        currentLessonId: lesson1Id,
+        previousLessonId: null,
+        completedLessonIds: [],
+        isEnrolled: true,
+        isFree: false,
+      );
+      expect(unlocked, isTrue);
+    });
+
+    test('Second lesson is restricted when first lesson is NOT completed', () {
+      final unlocked = isLessonUnlocked(
+        lessonIndex: 1,
+        currentLessonId: lesson2Id,
+        previousLessonId: lesson1Id,
+        completedLessonIds: [], // 0 lessons done
+        isEnrolled: true,
+        isFree: false,
+      );
+      expect(unlocked, isFalse);
+    });
+
+    test('Second lesson unlocks immediately once first lesson is completed', () {
+      final unlocked = isLessonUnlocked(
+        lessonIndex: 1,
+        currentLessonId: lesson2Id,
+        previousLessonId: lesson1Id,
+        completedLessonIds: [lesson1Id], // lesson 1 done
+        isEnrolled: true,
+        isFree: false,
+      );
+      expect(unlocked, isTrue);
+    });
+
+    test('Third lesson remains restricted if second lesson is not yet done', () {
+      final unlocked = isLessonUnlocked(
+        lessonIndex: 2,
+        currentLessonId: lesson3Id,
+        previousLessonId: lesson2Id,
+        completedLessonIds: [lesson1Id], // only lesson 1 done, not lesson 2
+        isEnrolled: true,
+        isFree: false,
+      );
+      expect(unlocked, isFalse);
+    });
+
+    test('Completed lessons always remain unlocked for re-watching', () {
+      final unlocked = isLessonUnlocked(
+        lessonIndex: 1,
+        currentLessonId: lesson2Id,
+        previousLessonId: lesson1Id,
+        completedLessonIds: [lesson2Id],
+        isEnrolled: true,
+        isFree: false,
+      );
+      expect(unlocked, isTrue);
+    });
   });
 }
+

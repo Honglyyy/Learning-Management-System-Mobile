@@ -47,6 +47,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
   late final TextEditingController _descCtrl;
   late final TextEditingController _priceCtrl;
   late final TextEditingController _durationCtrl;
+  late final TextEditingController _accessDurationDaysCtrl;
   late final TextEditingController _outcomesCtrl;
   late final TextEditingController _requirementsCtrl;
 
@@ -72,6 +73,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
     _descCtrl = TextEditingController(text: c?.description ?? '');
     _priceCtrl = TextEditingController(text: c != null ? c.price.toString() : '0');
     _durationCtrl = TextEditingController(text: c?.overallDuration ?? '');
+    _accessDurationDaysCtrl = TextEditingController(text: (c?.accessDurationDays ?? 180).toString());
     _outcomesCtrl = TextEditingController(text: c?.learningOutcomes ?? '');
     _requirementsCtrl = TextEditingController(text: c?.requirements ?? '');
 
@@ -90,6 +92,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
     _descCtrl.dispose();
     _priceCtrl.dispose();
     _durationCtrl.dispose();
+    _accessDurationDaysCtrl.dispose();
     _outcomesCtrl.dispose();
     _requirementsCtrl.dispose();
     super.dispose();
@@ -193,6 +196,7 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
       'status': _status,
       'learningOutcomes': _outcomesCtrl.text.trim(),
       'requirements': _requirementsCtrl.text.trim(),
+      'accessDurationDays': int.tryParse(_accessDurationDaysCtrl.text.trim()) ?? 180,
       'instructor': null,
     };
 
@@ -322,6 +326,111 @@ class _CourseFormDialogState extends ConsumerState<CourseFormDialog> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Access Duration Days Field
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: theme.colorScheme.outlineVariant),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(Icons.schedule, size: 16, color: theme.colorScheme.primary),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      'Days Till Course Access Expires',
+                                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                                Builder(
+                                  builder: (context) {
+                                    final days = int.tryParse(_accessDurationDaysCtrl.text.trim()) ?? 180;
+                                    final label = days >= 30
+                                        ? '~${(days / 30).toStringAsFixed(1).replaceAll(RegExp(r'\.0$'), '')} month${days >= 60 ? "s" : ""}'
+                                        : '$days days';
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.secondaryContainer,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        label,
+                                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSecondaryContainer),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _accessDurationDaysCtrl,
+                              keyboardType: TextInputType.number,
+                              decoration: const InputDecoration(
+                                hintText: 'e.g. 30, 90, 180, 365',
+                                suffixText: 'Days',
+                                border: OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                              onChanged: (_) => setState(() {}),
+                              validator: (v) {
+                                if (v != null && v.trim().isNotEmpty) {
+                                  final n = int.tryParse(v.trim());
+                                  if (n == null || n < 1) return 'Must be at least 1 day';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              children: [
+                                const Text('Quick presets:', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                                ...[
+                                  {'days': 30, 'label': '30 Days (1 mo)'},
+                                  {'days': 60, 'label': '60 Days (2 mo)'},
+                                  {'days': 90, 'label': '90 Days (3 mo)'},
+                                  {'days': 180, 'label': '180 Days (6 mo)'},
+                                  {'days': 365, 'label': '365 Days (1 yr)'},
+                                ].map((preset) {
+                                  final pDays = preset['days'] as int;
+                                  final currentDays = int.tryParse(_accessDurationDaysCtrl.text.trim()) ?? 0;
+                                  final isSelected = currentDays == pDays;
+                                  return ChoiceChip(
+                                    label: Text(preset['label'] as String, style: const TextStyle(fontSize: 11)),
+                                    selected: isSelected,
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    onSelected: (_) {
+                                      setState(() {
+                                        _accessDurationDaysCtrl.text = pDays.toString();
+                                      });
+                                    },
+                                  );
+                                }),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'Set how many days students have access to course lessons, quizzes, and materials after enrolling. Once expired, students will see an expiration notice and will be offered a 50% discount to re-enroll.',
+                              style: TextStyle(fontSize: 11, color: Colors.grey, height: 1.3),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 14),
 

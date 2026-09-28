@@ -31,6 +31,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
 
   List<EnrollmentModel> _inProgress = [];
   List<EnrollmentModel> _completed = [];
+  List<EnrollmentModel> _expired = [];
   List<CertificateModel> _certificates = [];
   List<CourseModel> _savedCourses = [];
   ContinueLearningItem? _continueLearning;
@@ -38,10 +39,20 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
   bool _isLoading = true;
   String? _error;
 
+  String _formatDate(dynamic date) {
+    if (date == null) return '';
+    try {
+      final parsed = DateTime.parse(date.toString());
+      return '${parsed.year}-${parsed.month.toString().padLeft(2, '0')}-${parsed.day.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return date.toString();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
     _loadData();
   }
 
@@ -73,8 +84,9 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
 
       if (mounted) {
         setState(() {
-          _inProgress = allEnrollments.where((e) => !e.isCompleted).toList();
-          _completed = allEnrollments.where((e) => e.isCompleted).toList();
+          _inProgress = allEnrollments.where((e) => !e.isCompleted && !e.isEnrollmentExpired).toList();
+          _completed = allEnrollments.where((e) => e.isCompleted && !e.isEnrollmentExpired).toList();
+          _expired = allEnrollments.where((e) => e.isEnrollmentExpired).toList();
           _certificates = results[1] as List<CertificateModel>;
           _savedCourses = results[2] as List<CourseModel>;
           _continueLearning = results[3] as ContinueLearningItem?;
@@ -245,6 +257,37 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
                           Text('${item.progressPercent.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                         ],
                       ),
+                      if (item.expirationDate != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.schedule, size: 12, color: item.isExpiringSoon ? Colors.amber[800] : Colors.grey),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Expires: ${_formatDate(item.expirationDate)}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: item.isExpiringSoon ? Colors.amber[900] : Colors.grey,
+                                fontWeight: item.isExpiringSoon ? FontWeight.bold : FontWeight.normal,
+                              ),
+                            ),
+                            if (item.isExpiringSoon) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  item.daysRemaining == 0 ? 'Today' : '${item.daysRemaining}d left',
+                                  style: TextStyle(fontSize: 9, color: Colors.amber[900], fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -353,6 +396,146 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
     );
   }
 
+  Widget _buildExpiredTab() {
+    if (_expired.isEmpty) {
+      return const EmptyState(
+        title: 'No expired courses',
+        description: 'All your active enrollments are currently valid.',
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _expired.length + 1,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.amber.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.history, color: Colors.amber, size: 20),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Your access to these courses has expired. As a returning student, you can re-enroll at an exclusive 50% discount off current prices!',
+                    style: TextStyle(fontSize: 12, height: 1.3),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final item = _expired[index - 1];
+        final cover = mediaUrl(item.courseCoverUrl);
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: SizedBox(
+                    width: 90,
+                    height: 85,
+                    child: cover.isNotEmpty
+                        ? (kIsWeb
+                            ? Image.network(
+                                cover,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: const Color(0xFF1E293B),
+                                  child: const Center(child: Icon(Icons.school, size: 28, color: Colors.white54)),
+                                ),
+                              )
+                            : CachedNetworkImage(
+                                imageUrl: cover,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => Container(color: Colors.grey.withValues(alpha: 0.2)),
+                                errorWidget: (_, __, ___) => Container(
+                                  color: const Color(0xFF1E293B),
+                                  child: const Center(child: Icon(Icons.school, size: 28, color: Colors.white54)),
+                                ),
+                              ))
+                        : Container(color: Colors.grey.withValues(alpha: 0.2), child: const Icon(Icons.school)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.schedule, size: 10, color: Colors.red),
+                                SizedBox(width: 3),
+                                Text(
+                                  'Expired',
+                                  style: TextStyle(fontSize: 10, color: Colors.red, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.courseTitle,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (item.instructorName != null) ...[
+                        const SizedBox(height: 2),
+                        Text(item.instructorName!, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      ],
+                      if (item.expirationDate != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Expired on: ${_formatDate(item.expirationDate)}',
+                          style: const TextStyle(fontSize: 11, color: Colors.red),
+                        ),
+                      ],
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.replay, size: 14),
+                          label: const Text('Renew Access (50% Off)', style: TextStyle(fontSize: 12)),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          ),
+                          onPressed: () => context.push('/courses/${item.courseId}'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildCertificatesTab() {
     if (_certificates.isEmpty) {
       return const EmptyState(
@@ -441,7 +624,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
-        childAspectRatio: 0.72,
+        childAspectRatio: 0.78,
       ),
       itemCount: _savedCourses.length,
       itemBuilder: (context, index) {
@@ -456,6 +639,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
             price: c.price,
             level: c.level,
             enrollmentCount: c.enrollmentCount,
+            accessDurationDays: c.accessDurationDays,
             isFavorite: true,
           ),
           onTap: () => context.push('/courses/${c.courseId}'),
@@ -481,6 +665,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
           tabs: [
             Tab(text: 'In Progress (${_inProgress.length})'),
             Tab(text: 'Completed (${_completed.length})'),
+            Tab(text: 'Expired (${_expired.length})'),
             Tab(text: 'Certificates (${_certificates.length})'),
             Tab(text: 'Saved (${_savedCourses.length})'),
           ],
@@ -502,6 +687,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
                         children: [
                           _buildInProgressTab(),
                           _buildCompletedTab(),
+                          _buildExpiredTab(),
                           _buildCertificatesTab(),
                           _buildSavedTab(),
                         ],

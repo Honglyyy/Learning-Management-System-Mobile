@@ -1,7 +1,9 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers.dart';
+import '../../../core/utils/category_utils.dart';
 import '../../../core/widgets/api_alert.dart';
 import '../../../core/widgets/course_card.dart';
 import '../../../core/widgets/empty_state.dart';
@@ -12,7 +14,14 @@ import '../../../models/course_model.dart';
 import '../../../models/enrollment_model.dart';
 
 class CatalogScreen extends ConsumerStatefulWidget {
-  const CatalogScreen({super.key});
+  final String? initialQuery;
+  final int? initialCategoryId;
+
+  const CatalogScreen({
+    super.key,
+    this.initialQuery,
+    this.initialCategoryId,
+  });
 
   @override
   ConsumerState<CatalogScreen> createState() => _CatalogScreenState();
@@ -46,6 +55,12 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
+    if (widget.initialQuery != null) {
+      _searchController.text = widget.initialQuery!;
+    }
+    if (widget.initialCategoryId != null) {
+      _selectedCategoryId = widget.initialCategoryId;
+    }
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -75,7 +90,10 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
       final authRepo = ref.read(authRepositoryProvider);
 
       final results = await Future.wait([
-        courseRepo.getCourses(),
+        courseRepo.getCourses(
+          query: widget.initialQuery,
+          categoryId: _selectedCategoryId,
+        ),
         courseRepo.getFeatured().catchError((_) => <CourseModel>[]),
         courseRepo.getPopular().catchError((_) => <CourseModel>[]),
         categoryRepo.getCategories().catchError((_) => <CategoryModel>[]),
@@ -292,36 +310,112 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
   }
 
   Widget _buildCategoryChips() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 6.0),
-            child: FilterChip(
-              label: const Text('All Categories'),
-              selected: _selectedCategoryId == null,
-              onSelected: (_) {
-                setState(() => _selectedCategoryId = null);
-                _fetchFilteredCourses();
+    final theme = Theme.of(context);
+
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(
+        dragDevices: {
+          PointerDeviceKind.touch,
+          PointerDeviceKind.mouse,
+          PointerDeviceKind.trackpad,
+          PointerDeviceKind.stylus,
+        },
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Row(
+          children: [
+            _buildCategoryPill(
+              label: 'All Categories',
+              isSelected: _selectedCategoryId == null,
+              color: theme.colorScheme.primary,
+              onTap: () {
+                if (_selectedCategoryId != null) {
+                  setState(() => _selectedCategoryId = null);
+                  _fetchFilteredCourses();
+                }
               },
             ),
-          ),
-          ..._categories.map((cat) {
-            final isSelected = _selectedCategoryId == cat.categoryId;
-            return Padding(
-              padding: const EdgeInsets.only(right: 6.0),
-              child: FilterChip(
-                label: Text(cat.category),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() => _selectedCategoryId = selected ? cat.categoryId : null);
-                  _fetchFilteredCourses();
-                },
+            const SizedBox(width: 8),
+            ..._categories.map((cat) {
+              final isSelected = _selectedCategoryId == cat.categoryId;
+              final meta = CategoryMeta.getMeta(cat.category);
+              return Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: _buildCategoryPill(
+                  label: cat.category,
+                  isSelected: isSelected,
+                  color: meta.color,
+                  onTap: () {
+                    setState(() {
+                      _selectedCategoryId = isSelected ? null : cat.categoryId;
+                    });
+                    _fetchFilteredCourses();
+                  },
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryPill({
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final bgColor = isSelected
+        ? color
+        : (isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9));
+    final fgColor = isSelected
+        ? Colors.white
+        : (isDark ? const Color(0xFFE2E8F0) : const Color(0xFF334155));
+    final borderColor = isSelected
+        ? color
+        : (isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.08));
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeInOut,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: borderColor, width: 1.2),
+        boxShadow: isSelected
+            ? [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.3),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ]
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                color: fgColor,
+                letterSpacing: 0.2,
               ),
-            );
-          }),
-        ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -569,6 +663,10 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
                     level: c.level,
                     duration: c.overallDuration,
                     enrollmentCount: c.enrollmentCount,
+                    accessDurationDays: c.accessDurationDays,
+                    isExpired: c.isExpired,
+                    discountedPrice: c.discountedPrice,
+                    isEnrolled: c.isEnrolled,
                     isFavorite: c.isFavorite,
                   ),
                   isListView: true,
@@ -580,11 +678,16 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
           )
         else
           LayoutBuilder(builder: (context, constraints) {
-            final crossAxisCount = constraints.maxWidth > 900
-                ? 4
-                : constraints.maxWidth > 600
-                    ? 3
-                    : 2;
+            final width = constraints.maxWidth;
+            final crossAxisCount = width > 1100
+                ? 5
+                : width > 850
+                    ? 4
+                    : width > 540
+                        ? 3
+                        : 2;
+            final cardWidth = (width - ((crossAxisCount - 1) * 12)) / crossAxisCount;
+            final childAspectRatio = (cardWidth / 215).clamp(0.76, 0.98);
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -592,7 +695,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
                 crossAxisCount: crossAxisCount,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 0.72,
+                childAspectRatio: childAspectRatio,
               ),
               itemCount: displayed.length,
               itemBuilder: (context, index) {
@@ -608,6 +711,10 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
                     level: c.level,
                     duration: c.overallDuration,
                     enrollmentCount: c.enrollmentCount,
+                    accessDurationDays: c.accessDurationDays,
+                    isExpired: c.isExpired,
+                    discountedPrice: c.discountedPrice,
+                    isEnrolled: c.isEnrolled,
                     isFavorite: c.isFavorite,
                   ),
                   isListView: false,
@@ -666,7 +773,16 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
               ApiAlert(error: _error, onRetry: _loadInitialData),
               if (_isLoading)
                 LayoutBuilder(builder: (context, constraints) {
-                  final crossAxisCount = constraints.maxWidth > 600 ? 3 : 2;
+                  final width = constraints.maxWidth;
+                  final crossAxisCount = width > 1100
+                      ? 5
+                      : width > 850
+                          ? 4
+                          : width > 540
+                              ? 3
+                              : 2;
+                  final cardWidth = (width - ((crossAxisCount - 1) * 12)) / crossAxisCount;
+                  final childAspectRatio = (cardWidth / 215).clamp(0.76, 0.98);
                   return GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -674,7 +790,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
                       crossAxisCount: crossAxisCount,
                       crossAxisSpacing: 12,
                       mainAxisSpacing: 12,
-                      childAspectRatio: 0.72,
+                      childAspectRatio: childAspectRatio,
                     ),
                     itemCount: 6,
                     itemBuilder: (context, index) => const CourseCardSkeleton(),

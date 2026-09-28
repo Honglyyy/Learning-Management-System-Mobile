@@ -61,6 +61,12 @@ class CourseModel {
   final int lessonCount;
   final int enrollmentCount;
   final bool isFavorite;
+  final int accessDurationDays;
+  final bool isEnrolled;
+  final bool isExpired;
+  final dynamic expirationDate;
+  final bool hasReEnrollmentDiscount;
+  final num? discountedPrice;
   final List<SectionModel> sections;
   final List<CourseReview> reviews;
 
@@ -85,6 +91,12 @@ class CourseModel {
     this.lessonCount = 0,
     this.enrollmentCount = 0,
     this.isFavorite = false,
+    this.accessDurationDays = 180,
+    this.isEnrolled = false,
+    this.isExpired = false,
+    this.expirationDate,
+    this.hasReEnrollmentDiscount = false,
+    this.discountedPrice,
     this.sections = const [],
     this.reviews = const [],
   });
@@ -116,6 +128,12 @@ class CourseModel {
       lessonCount: json['lessonCount'] as int? ?? 0,
       enrollmentCount: json['enrollmentCount'] as int? ?? 0,
       isFavorite: json['isFavorite'] ?? json['favorite'] ?? false,
+      accessDurationDays: (json['accessDurationDays'] as num?)?.toInt() ?? 180,
+      isEnrolled: json['isEnrolled'] as bool? ?? false,
+      isExpired: json['isExpired'] as bool? ?? false,
+      expirationDate: json['expirationDate'],
+      hasReEnrollmentDiscount: json['hasReEnrollmentDiscount'] as bool? ?? false,
+      discountedPrice: json['discountedPrice'] as num?,
       sections: rawSections.map((s) => SectionModel.fromJson(s)).toList(),
       reviews: rawReviews.map((r) => CourseReview.fromJson(r)).toList(),
     );
@@ -134,6 +152,7 @@ class CourseModel {
         'learningOutcomes': learningOutcomes,
         'requirements': requirements,
         'categoryIds': categoryIds,
+        'accessDurationDays': accessDurationDays,
         if (instructorId != null) 'instructorId': instructorId,
       };
 

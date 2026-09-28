@@ -1,4 +1,6 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lms_flutter/core/utils/category_utils.dart';
 import 'package:lms_flutter/core/utils/formatters.dart';
 import 'package:lms_flutter/core/utils/validators.dart';
 import 'package:lms_flutter/core/utils/media_url.dart';
@@ -33,6 +35,29 @@ void main() {
       expect(mediaUrl(null), '');
       expect(mediaUrl('https://example.com/photo.jpg'), 'https://example.com/photo.jpg');
       expect(mediaUrl('/uploads/cover.png'), contains('/uploads/cover.png'));
+    });
+
+    test('CategoryMeta resolves icons and colors for various category names', () {
+      final backendMeta = CategoryMeta.getMeta('Backend Development');
+      expect(backendMeta.icon, Icons.dns_rounded);
+      expect(backendMeta.color, const Color(0xFF6366F1));
+
+      final frontendMeta = CategoryMeta.getMeta('Frontend Web');
+      expect(frontendMeta.icon, Icons.code_rounded);
+      expect(frontendMeta.color, const Color(0xFF06B6D4));
+
+      final mobileMeta = CategoryMeta.getMeta('Mobile App Development');
+      expect(mobileMeta.icon, Icons.phone_iphone_rounded);
+      expect(mobileMeta.color, const Color(0xFF8B5CF6));
+
+      final cloudMeta = CategoryMeta.getMeta('Cloud & DevOps');
+      expect(cloudMeta.icon, Icons.cloud_sync_rounded);
+
+      final aiMeta = CategoryMeta.getMeta('AI & Machine Learning');
+      expect(aiMeta.icon, Icons.auto_awesome_rounded);
+
+      final otherMeta = CategoryMeta.getMeta('General Skills');
+      expect(otherMeta.icon, Icons.category_rounded);
     });
   });
 }

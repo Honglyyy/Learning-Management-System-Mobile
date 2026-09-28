@@ -142,3 +142,36 @@ class LessonModel {
       ? videoUrl!
       : (videoDir ?? '');
 }
+
+class LessonStatus {
+  final int lessonId;
+  final String title;
+  final int orderIndex;
+  final String? duration;
+  final String status;
+  final bool isFree;
+
+  LessonStatus({
+    required this.lessonId,
+    required this.title,
+    required this.orderIndex,
+    this.duration,
+    required this.status,
+    this.isFree = false,
+  });
+
+  bool get isCompleted => status == 'COMPLETED';
+  bool get isLocked => status == 'LOCKED';
+  bool get isIncomplete => status == 'INCOMPLETE';
+
+  factory LessonStatus.fromJson(Map<String, dynamic> json) {
+    return LessonStatus(
+      lessonId: (json['lessonId'] as num?)?.toInt() ?? (json['id'] as num?)?.toInt() ?? 0,
+      title: json['title']?.toString() ?? '',
+      orderIndex: (json['orderIndex'] as num?)?.toInt() ?? 0,
+      duration: json['duration']?.toString(),
+      status: json['status']?.toString() ?? 'LOCKED',
+      isFree: json['isFree'] == true,
+    );
+  }
+}

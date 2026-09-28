@@ -335,6 +335,31 @@ class _InstructorCourseCardState extends ConsumerState<InstructorCourseCard> {
                     ),
                   ),
 
+                  // Access Duration Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withValues(alpha: 0.1),
+                      border: Border.all(color: Colors.amber.withValues(alpha: 0.4)),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.schedule, size: 10, color: Colors.amber),
+                        const SizedBox(width: 3),
+                        Text(
+                          '${c.accessDurationDays}d access',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.amber[900],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
                   // Publish/Unpublish Toggle Button
                   InkWell(
                     onTap: _isTogglingStatus ? null : _toggleStatus,
@@ -404,6 +429,12 @@ class _InstructorCourseCardState extends ConsumerState<InstructorCourseCard> {
                   const Text('•', style: TextStyle(color: Colors.grey)),
                   const SizedBox(width: 8),
                   Text('${c.enrollmentCount} enrolled', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+                  const SizedBox(width: 8),
+                  const Text('•', style: TextStyle(color: Colors.grey)),
+                  const SizedBox(width: 8),
+                  Icon(Icons.schedule, size: 12, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text('${c.accessDurationDays}d access', style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                 ],
               ),
             ],

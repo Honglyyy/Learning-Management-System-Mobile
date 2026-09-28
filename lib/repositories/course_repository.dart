@@ -1,6 +1,7 @@
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../models/course_model.dart';
+import '../models/lesson_model.dart';
 
 class CourseRepository {
   final ApiClient _api;
@@ -78,10 +79,40 @@ class CourseRepository {
   }
 
   Future<List<int>> getLessonsStatus(int courseId) async {
-    final res = await _api.get(ApiEndpoints.courseLessonsStatus(courseId));
-    if (res is List) {
-      return res.map((id) => (id as num).toInt()).toList();
-    }
+    try {
+      final res = await _api.get(ApiEndpoints.courseLessonsStatus(courseId));
+      if (res is List) {
+        final List<int> completed = [];
+        for (final item in res) {
+          if (item is num) {
+            completed.add(item.toInt());
+          } else if (item is Map) {
+            final status = item['status']?.toString();
+            final isCompleted = status == 'COMPLETED' ||
+                item['isCompleted'] == true ||
+                item['completed'] == true;
+            final lessonId = item['lessonId'] ?? item['id'];
+            if (isCompleted && lessonId is num) {
+              completed.add(lessonId.toInt());
+            }
+          }
+        }
+        return completed;
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  Future<List<LessonStatus>> getLessonStatuses(int courseId) async {
+    try {
+      final res = await _api.get(ApiEndpoints.courseLessonsStatus(courseId));
+      if (res is List) {
+        return res
+            .whereType<Map<String, dynamic>>()
+            .map((item) => LessonStatus.fromJson(item))
+            .toList();
+      }
+    } catch (_) {}
     return [];
   }
 

@@ -1,7 +1,9 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers.dart';
+import '../../../core/utils/category_utils.dart';
 import '../../../core/widgets/api_alert.dart';
 import '../../../core/widgets/course_card.dart';
 import '../../../core/widgets/loading_skeleton.dart';
@@ -322,6 +324,122 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  void _openAllCategoriesSheet(BuildContext context, ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (_, scrollController) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.hintColor.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'All Categories',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 20),
+                        onPressed: () => Navigator.of(ctx).pop(),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: GridView.builder(
+                      controller: scrollController,
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 2.6,
+                      ),
+                      itemCount: _categories.length,
+                      itemBuilder: (context, index) {
+                        final cat = _categories[index];
+                        final meta = CategoryMeta.getMeta(cat.category);
+                        final isDark = theme.brightness == Brightness.dark;
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(14),
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            context.go('/catalog?categoryId=${cat.categoryId}');
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: meta.color.withValues(alpha: 0.25),
+                                width: 1.2,
+                              ),
+                            ),
+                            child: Text(
+                              cat.category,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                                color: isDark ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        Navigator.of(ctx).pop();
+                        context.go('/catalog');
+                      },
+                      child: const Text('Explore All Courses in Catalog'),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildCategoriesSection(ThemeData theme) {
     if (_categories.isEmpty) return const SizedBox.shrink();
 
@@ -336,26 +454,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
             ),
             TextButton(
-              onPressed: () => context.go('/catalog'),
+              onPressed: () => _openAllCategoriesSheet(context, theme),
               child: const Text('View All'),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         SizedBox(
           height: 42,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: _categories.length,
-            separatorBuilder: (_, index) => const SizedBox(width: 8),
-            itemBuilder: (context, index) {
-              final cat = _categories[index];
-              return ActionChip(
-                avatar: Icon(Icons.folder_open, size: 16, color: theme.colorScheme.primary),
-                label: Text(cat.category, style: const TextStyle(fontSize: 13)),
-                onPressed: () => context.go('/catalog'),
-              );
-            },
+          child: ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.trackpad,
+                PointerDeviceKind.stylus,
+              },
+            ),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: _categories.length,
+              separatorBuilder: (_, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final cat = _categories[index];
+                final meta = CategoryMeta.getMeta(cat.category);
+                final isDark = theme.brightness == Brightness.dark;
+
+                return InkWell(
+                  borderRadius: BorderRadius.circular(22),
+                  onTap: () => context.go('/catalog?categoryId=${cat.categoryId}'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(
+                        color: meta.color.withValues(alpha: 0.35),
+                        width: 1.2,
+                      ),
+                    ),
+                    child: Text(
+                      cat.category,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
         ),
         const SizedBox(height: 20),
@@ -388,16 +540,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         const SizedBox(height: 8),
         SizedBox(
-          height: 240,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: courses.length.clamp(0, 8),
-            separatorBuilder: (_, index) => const SizedBox(width: 14),
-            itemBuilder: (context, index) {
-              final c = courses[index];
-              return SizedBox(
-                width: 220,
-                child: CourseCard(
+          height: 250,
+          child: ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(
+              dragDevices: {
+                PointerDeviceKind.touch,
+                PointerDeviceKind.mouse,
+                PointerDeviceKind.trackpad,
+                PointerDeviceKind.stylus,
+              },
+            ),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const AlwaysScrollableScrollPhysics(),
+              itemCount: courses.length.clamp(0, 8),
+              separatorBuilder: (_, index) => const SizedBox(width: 14),
+              itemBuilder: (context, index) {
+                final c = courses[index];
+                return SizedBox(
+                  width: 200,
+                  child: CourseCard(
                   course: CourseCardItem(
                     courseId: c.courseId,
                     title: c.title,
@@ -408,6 +570,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     level: c.level,
                     duration: c.overallDuration,
                     enrollmentCount: c.enrollmentCount,
+                    accessDurationDays: c.accessDurationDays,
+                    isExpired: c.isExpired,
+                    discountedPrice: c.discountedPrice,
+                    isEnrolled: c.isEnrolled,
                     isFavorite: c.isFavorite,
                   ),
                   isListView: false,
@@ -418,7 +584,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             },
           ),
         ),
-        const SizedBox(height: 20),
+      ),
+      const SizedBox(height: 20),
       ],
     );
   }

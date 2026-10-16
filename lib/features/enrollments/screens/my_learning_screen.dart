@@ -411,7 +411,6 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
       itemCount: _completed.length,
       itemBuilder: (context, index) {
         final item = _completed[index];
-        final cover = mediaUrl(item.courseCoverUrl);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -494,7 +493,6 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
         }
 
         final item = _expired[index - 1];
-        final cover = mediaUrl(item.courseCoverUrl);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),

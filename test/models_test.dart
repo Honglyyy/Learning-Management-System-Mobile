@@ -4,6 +4,7 @@ import 'package:lms_flutter/models/user_model.dart';
 import 'package:lms_flutter/models/quiz_model.dart';
 import 'package:lms_flutter/models/assignment_model.dart';
 import 'package:lms_flutter/models/category_model.dart';
+import 'package:lms_flutter/models/enrollment_model.dart';
 
 void main() {
   group('Model Deserialization Tests', () {
@@ -132,6 +133,30 @@ void main() {
       final cat = CategoryModel.fromJson(json);
       expect(cat.categoryId, 3);
       expect(cat.category, 'Cloud Computing');
+    });
+
+    test('EnrollmentModel parses from JSON and copyWith populates course cover', () {
+      final json = {
+        'enrollmentId': 5,
+        'courseId': 1,
+        'courseTitle': 'Docker & Containerization Mastery',
+        'status': 'ACTIVE',
+        'progressPercent': 0.0,
+      };
+
+      final enrollment = EnrollmentModel.fromJson(json);
+      expect(enrollment.enrollmentId, 5);
+      expect(enrollment.courseId, 1);
+      expect(enrollment.courseTitle, 'Docker & Containerization Mastery');
+      expect(enrollment.courseCoverUrl, isNull);
+
+      final updated = enrollment.copyWith(
+        courseCoverUrl: 'https://res.cloudinary.com/lyxxfhot/image/upload/sample.png',
+        instructorName: 'Lay Hongly',
+      );
+      expect(updated.courseCoverUrl, 'https://res.cloudinary.com/lyxxfhot/image/upload/sample.png');
+      expect(updated.instructorName, 'Lay Hongly');
+      expect(updated.courseTitle, 'Docker & Containerization Mastery');
     });
   });
 }

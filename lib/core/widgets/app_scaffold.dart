@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers.dart';
-import '../theme/theme_mode_notifier.dart';
 
 final unreadNotificationCountProvider =
     StateNotifierProvider<UnreadNotificationNotifier, int>((ref) {
@@ -71,9 +70,10 @@ class AppScaffold extends ConsumerWidget {
     }
 
     if (role == 'INSTRUCTOR') {
-      if (path.startsWith('/instructor')) return 1;
-      if (path.startsWith('/profile')) return 2;
-      return 0;
+      if (path.contains('tab=1')) return 1;
+      if (path.contains('tab=2')) return 2;
+      if (path.startsWith('/profile') || path.contains('tab=3')) return 3;
+      return 0; // Home
     }
 
     // STUDENT / USER: 0: Home, 1: Search, 2: My Courses, 3: Instructors, 4: Profile
@@ -127,13 +127,16 @@ class AppScaffold extends ConsumerWidget {
     if (role == 'INSTRUCTOR') {
       switch (index) {
         case 0:
-          context.go('/catalog');
+          context.go('/instructor?tab=0');
           break;
         case 1:
-          context.go('/instructor');
+          context.go('/instructor?tab=1');
           break;
         case 2:
-          context.go('/profile');
+          context.go('/instructor?tab=2');
+          break;
+        case 3:
+          context.go('/instructor?tab=3');
           break;
       }
       return;
@@ -196,9 +199,26 @@ class AppScaffold extends ConsumerWidget {
       ];
     } else if (role == 'INSTRUCTOR') {
       navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.explore_outlined), activeIcon: Icon(Icons.explore), label: 'Catalog'),
-        BottomNavigationBarItem(icon: Icon(Icons.video_library_outlined), activeIcon: Icon(Icons.video_library), label: 'Studio'),
-        BottomNavigationBarItem(icon: Icon(Icons.person_outline), activeIcon: Icon(Icons.person), label: 'Profile'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.home_outlined),
+          activeIcon: Icon(Icons.home_rounded),
+          label: 'Home',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.bar_chart_outlined),
+          activeIcon: Icon(Icons.bar_chart_rounded),
+          label: 'Analytic',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.grid_view_outlined),
+          activeIcon: Icon(Icons.grid_view_rounded),
+          label: 'Manage',
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.person_outline),
+          activeIcon: Icon(Icons.person_rounded),
+          label: 'Profile',
+        ),
       ];
     } else {
       navItems = [
@@ -228,6 +248,15 @@ class AppScaffold extends ConsumerWidget {
           label: 'Profile',
         ),
       ];
+    }
+
+    if (isAuth && role == 'INSTRUCTOR' && (currentPath.startsWith('/instructor') || currentPath == '/')) {
+      return Listener(
+        onPointerDown: (_) {
+          ref.read(sessionManagerProvider).recordActivity();
+        },
+        child: child,
+      );
     }
 
     return Listener(

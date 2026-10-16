@@ -5,14 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8aecc561-8ddc-4901-8be2-2c857a8bc7e8" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/core/constants/app_constants.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/core/constants/app_constants.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/core/widgets/course_card.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/core/widgets/course_card.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/courses/screens/catalog_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/courses/screens/catalog_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/features/home/screens/home_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/home/screens/home_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/lib/router/app_router.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/router/app_router.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/course_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/test/course_test.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend" beforeDir="false" afterPath="$PROJECT_DIR$/backend" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ly/lmsbackend/dto/enrollmentdtos/EnrollmentResponseDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ly/lmsbackend/dto/enrollmentdtos/EnrollmentResponseDTO.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ly/lmsbackend/mapper/EnrollmentMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ly/lmsbackend/mapper/EnrollmentMapper.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

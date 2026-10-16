@@ -46,6 +46,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (!isAuth) return '/login?reason=unauthorized';
         if (role != 'INSTRUCTOR' && role != 'ADMIN') return '/';
       }
+      if (isAuth && role == 'INSTRUCTOR' && path == '/') {
+        return '/instructor';
+      }
 
       // Protected student routes
       if (path.startsWith('/my/') ||
@@ -114,7 +117,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/instructor',
-            builder: (context, state) => const InstructorStudioScreen(),
+            builder: (context, state) => InstructorStudioScreen(
+              initialTab: int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+            ),
           ),
           GoRoute(
             path: '/admin',

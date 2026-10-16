@@ -52,7 +52,7 @@ void main() {
       expect(user.isActive, isTrue);
     });
 
-    test('QuizModel parses from JSON correctly', () {
+    test('QuizModel parses from JSON correctly with questions key', () {
       final json = {
         'quizId': 12,
         'quizTitle': 'Dart Basics Quiz',
@@ -77,6 +77,34 @@ void main() {
       expect(quiz.questions.length, 1);
       expect(quiz.questions.first.answers.length, 2);
       expect(quiz.questions.first.answers.first.isCorrect, isTrue);
+    });
+
+    test('QuizModel parses backend response using question key', () {
+      final json = {
+        'quizId': 1,
+        'title': 'Quiz 1.1: Container Fundamentals Check',
+        'totalPoints': 10.0,
+        'question': [
+          {
+            'questionId': 1,
+            'questionText': 'What is the primary architectural difference?',
+            'point': 3,
+            'answers': [
+              {'answerId': 2, 'answerText': 'Containers share host kernel', 'isCorrect': null},
+              {'answerId': 1, 'answerText': 'VMs emulate memory', 'isCorrect': null},
+            ]
+          }
+        ]
+      };
+
+      final quiz = QuizModel.fromJson(json);
+      expect(quiz.quizId, 1);
+      expect(quiz.quizTitle, 'Quiz 1.1: Container Fundamentals Check');
+      expect(quiz.totalPoint, 10);
+      expect(quiz.questions.length, 1);
+      expect(quiz.questions.first.answers.length, 2);
+      expect(quiz.questions.first.point, 3);
+      expect(quiz.questions.first.answers.first.isCorrect, isFalse);
     });
 
     test('AssignmentModel parses from JSON correctly', () {

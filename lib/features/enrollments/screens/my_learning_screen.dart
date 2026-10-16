@@ -78,9 +78,45 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
         certRepo.getMyCertificates().catchError((_) => <CertificateModel>[]),
         courseRepo.getFavorites().catchError((_) => <CourseModel>[]),
         enrollRepo.getContinueLearning().catchError((_) => null),
+        courseRepo.getCourses().catchError((_) => <CourseModel>[]),
       ]);
 
-      final allEnrollments = results[0] as List<EnrollmentModel>;
+      var allEnrollments = results[0] as List<EnrollmentModel>;
+      final allCourses = results[4] as List<CourseModel>;
+      final courseMap = {for (final c in allCourses) c.courseId: c};
+
+      allEnrollments = allEnrollments.map((e) {
+        final course = courseMap[e.courseId];
+        final cover = (e.courseCoverUrl != null && e.courseCoverUrl!.isNotEmpty)
+            ? e.courseCoverUrl
+            : course?.coverUrl;
+        final instructor = (e.instructorName != null && e.instructorName!.isNotEmpty)
+            ? e.instructorName
+            : course?.instructor;
+
+        if (cover != e.courseCoverUrl || instructor != e.instructorName) {
+          return e.copyWith(
+            courseCoverUrl: cover,
+            instructorName: instructor,
+          );
+        }
+        return e;
+      }).toList();
+
+      var continueItem = results[3] as ContinueLearningItem?;
+      if (continueItem != null && (continueItem.coverUrl == null || continueItem.coverUrl!.isEmpty)) {
+        final course = courseMap[continueItem.courseId];
+        if (course != null && course.coverUrl != null && course.coverUrl!.isNotEmpty) {
+          continueItem = ContinueLearningItem(
+            courseId: continueItem.courseId,
+            courseTitle: continueItem.courseTitle,
+            coverUrl: course.coverUrl,
+            lessonId: continueItem.lessonId,
+            lessonTitle: continueItem.lessonTitle,
+            progressPercent: continueItem.progressPercent,
+          );
+        }
+      }
 
       if (mounted) {
         setState(() {
@@ -89,7 +125,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
           _expired = allEnrollments.where((e) => e.isEnrollmentExpired).toList();
           _certificates = results[1] as List<CertificateModel>;
           _savedCourses = results[2] as List<CourseModel>;
-          _continueLearning = results[3] as ContinueLearningItem?;
+          _continueLearning = continueItem;
           _isLoading = false;
         });
       }
@@ -126,6 +162,8 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
     if (_continueLearning == null) return const SizedBox.shrink();
 
     final item = _continueLearning!;
+    final cover = mediaUrl(item.coverUrl);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -135,14 +173,28 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
+          if (cover.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 48,
+                height: 48,
+                child: kIsWeb
+                    ? Image.network(
+                        cover,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _buildContinuePlayIcon(),
+                      )
+                    : CachedNetworkImage(
+                        imageUrl: cover,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) => _buildContinuePlayIcon(),
+                      ),
+              ),
             ),
-            child: const Icon(Icons.play_arrow, color: Colors.white, size: 24),
-          ),
+          ] else ...[
+            _buildContinuePlayIcon(),
+          ],
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -186,6 +238,59 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
     );
   }
 
+  Widget _buildContinuePlayIcon() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(Icons.play_arrow, color: Colors.white, size: 24),
+    );
+  }
+
+  Widget _buildCoverThumbnail(String? url, {IconData fallbackIcon = Icons.school, double width = 90, double height = 80}) {
+    final cover = mediaUrl(url);
+
+    if (cover.isEmpty) {
+      return Container(
+        width: width,
+        height: height,
+        color: const Color(0xFF1E293B),
+        child: Center(child: Icon(fallbackIcon, size: 28, color: Colors.white54)),
+      );
+    }
+
+    if (kIsWeb) {
+      return SizedBox(
+        width: width,
+        height: height,
+        child: Image.network(
+          cover,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => Container(
+            color: const Color(0xFF1E293B),
+            child: Center(child: Icon(fallbackIcon, size: 28, color: Colors.white54)),
+          ),
+        ),
+      );
+    }
+
+    return SizedBox(
+      width: width,
+      height: height,
+      child: CachedNetworkImage(
+        imageUrl: cover,
+        fit: BoxFit.cover,
+        placeholder: (context, _) => Container(color: Colors.grey.withValues(alpha: 0.2)),
+        errorWidget: (context, url, error) => Container(
+          color: const Color(0xFF1E293B),
+          child: Center(child: Icon(fallbackIcon, size: 28, color: Colors.white54)),
+        ),
+      ),
+    );
+  }
+
   Widget _buildInProgressTab() {
     if (_inProgress.isEmpty) {
       return const EmptyState(
@@ -198,7 +303,6 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
       itemCount: _inProgress.length,
       itemBuilder: (context, index) {
         final item = _inProgress[index];
-        final cover = mediaUrl(item.courseCoverUrl);
 
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
@@ -209,28 +313,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 90,
-                    height: 80,
-                    child: cover.isNotEmpty
-                        ? (kIsWeb ? Image.network(
-                            cover,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: const Color(0xFF1E293B),
-                              child: const Center(child: Icon(Icons.school, size: 28, color: Colors.white54)),
-                            ),
-                          ) : CachedNetworkImage(
-                            imageUrl: cover,
-                            fit: BoxFit.cover,
-                            placeholder: (context, _) => Container(color: Colors.grey.withValues(alpha: 0.2)),
-                            errorWidget: (context, url, error) => Container(
-                              color: const Color(0xFF1E293B),
-                              child: const Center(child: Icon(Icons.school, size: 28, color: Colors.white54)),
-                            ),
-                          ))
-                        : Container(color: Colors.grey.withValues(alpha: 0.2), child: const Icon(Icons.school)),
-                  ),
+                  child: _buildCoverThumbnail(item.courseCoverUrl, width: 90, height: 80),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -338,28 +421,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 90,
-                    height: 80,
-                    child: cover.isNotEmpty
-                        ? (kIsWeb ? Image.network(
-                            cover,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => Container(
-                              color: const Color(0xFF1E293B),
-                              child: const Center(child: Icon(Icons.verified, size: 28, color: Colors.white54)),
-                            ),
-                          ) : CachedNetworkImage(
-                            imageUrl: cover,
-                            fit: BoxFit.cover,
-                            placeholder: (context, _) => Container(color: Colors.grey.withValues(alpha: 0.2)),
-                            errorWidget: (context, url, error) => Container(
-                              color: const Color(0xFF1E293B),
-                              child: const Center(child: Icon(Icons.verified, size: 28, color: Colors.white54)),
-                            ),
-                          ))
-                        : Container(color: Colors.grey.withValues(alpha: 0.2), child: const Icon(Icons.verified)),
-                  ),
+                  child: _buildCoverThumbnail(item.courseCoverUrl, fallbackIcon: Icons.verified, width: 90, height: 80),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -443,30 +505,7 @@ class _MyLearningScreenState extends ConsumerState<MyLearningScreen>
               children: [
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: SizedBox(
-                    width: 90,
-                    height: 85,
-                    child: cover.isNotEmpty
-                        ? (kIsWeb
-                            ? Image.network(
-                                cover,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: const Color(0xFF1E293B),
-                                  child: const Center(child: Icon(Icons.school, size: 28, color: Colors.white54)),
-                                ),
-                              )
-                            : CachedNetworkImage(
-                                imageUrl: cover,
-                                fit: BoxFit.cover,
-                                placeholder: (_, __) => Container(color: Colors.grey.withValues(alpha: 0.2)),
-                                errorWidget: (_, __, ___) => Container(
-                                  color: const Color(0xFF1E293B),
-                                  child: const Center(child: Icon(Icons.school, size: 28, color: Colors.white54)),
-                                ),
-                              ))
-                        : Container(color: Colors.grey.withValues(alpha: 0.2), child: const Icon(Icons.school)),
-                  ),
+                  child: _buildCoverThumbnail(item.courseCoverUrl, width: 90, height: 85),
                 ),
                 const SizedBox(width: 12),
                 Expanded(

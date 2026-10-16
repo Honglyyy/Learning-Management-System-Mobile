@@ -126,9 +126,12 @@ class _QuizPlayerScreenState extends ConsumerState<QuizPlayerScreen> {
       // Trigger reactive state refresh across all screens
       ref.read(courseProgressRefreshProvider.notifier).state++;
 
+      final updatedQuiz = await quizRepo.getLessonQuiz(widget.lessonId).catchError((_) => null);
+
       ToastService.showSuccess('Quiz submitted! You scored ${result.earnedPoints}/${result.totalPoints}');
       if (mounted) {
         setState(() {
+          if (updatedQuiz != null) _quiz = updatedQuiz;
           _latestResult = result;
           _isSubmitting = false;
         });
@@ -579,8 +582,24 @@ class _QuizPlayerScreenState extends ConsumerState<QuizPlayerScreen> {
                 ),
               ),
 
-            // Review Mode (All questions visible after submit or when user toggles view all)
-            if (_latestResult != null || _showAllQuestionsMode) ...[
+            if (quiz.questions.isEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 48.0),
+                  child: Column(
+                    children: [
+                      Icon(Icons.quiz_outlined, size: 54, color: theme.disabledColor),
+                      const SizedBox(height: 12),
+                      Text(
+                        'This quiz does not have any questions yet.',
+                        style: theme.textTheme.titleMedium?.copyWith(color: theme.hintColor),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else if (_latestResult != null || _showAllQuestionsMode) ...[
+              // Review Mode (All questions visible after submit or when user toggles view all)
               _buildStepSelector(quiz, theme),
               ...quiz.questions.asMap().entries.map((entry) {
                 return _buildSingleQuestionCard(entry.value, entry.key, theme);
@@ -601,12 +620,11 @@ class _QuizPlayerScreenState extends ConsumerState<QuizPlayerScreen> {
             ] else ...[
               // Step-by-Step Single Question Mode
               _buildStepSelector(quiz, theme),
-              if (quiz.questions.isNotEmpty)
-                _buildSingleQuestionCard(
-                  quiz.questions[_currentQuestionIndex],
-                  _currentQuestionIndex,
-                  theme,
-                ),
+              _buildSingleQuestionCard(
+                quiz.questions[_currentQuestionIndex],
+                _currentQuestionIndex,
+                theme,
+              ),
               const SizedBox(height: 12),
               _buildStepNavigationControls(quiz),
             ],

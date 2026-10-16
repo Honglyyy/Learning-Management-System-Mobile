@@ -16,11 +16,13 @@ import '../../../models/enrollment_model.dart';
 class CatalogScreen extends ConsumerStatefulWidget {
   final String? initialQuery;
   final int? initialCategoryId;
+  final String? initialTab;
 
   const CatalogScreen({
     super.key,
     this.initialQuery,
     this.initialCategoryId,
+    this.initialTab,
   });
 
   @override
@@ -30,6 +32,7 @@ class CatalogScreen extends ConsumerStatefulWidget {
 class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   // Filters
   String? _selectedLevel;
@@ -61,17 +64,40 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
     if (widget.initialCategoryId != null) {
       _selectedCategoryId = widget.initialCategoryId;
     }
-    _tabController = TabController(length: 3, vsync: this);
+    int initialTabIndex = 0;
+    if (widget.initialTab == 'featured') {
+      initialTabIndex = 1;
+    } else if (widget.initialTab == 'popular') {
+      initialTabIndex = 2;
+    }
+    _tabController = TabController(length: 3, vsync: this, initialIndex: initialTabIndex);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() => _visibleCount = 6);
       }
     });
+    _scrollController.addListener(_onScroll);
     _loadInitialData();
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (maxScroll - currentScroll <= 250) {
+      final activeList = _getActiveFeedList();
+      if (_visibleCount < activeList.length) {
+        setState(() {
+          _visibleCount = (_visibleCount + 6).clamp(0, activeList.length);
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _tabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -687,7 +713,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
                         ? 3
                         : 2;
             final cardWidth = (width - ((crossAxisCount - 1) * 12)) / crossAxisCount;
-            final childAspectRatio = (cardWidth / 215).clamp(0.76, 0.98);
+            final childAspectRatio = (cardWidth / 225).clamp(0.68, 0.85);
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -752,6 +778,7 @@ class _CatalogScreenState extends ConsumerState<CatalogScreen> with SingleTicker
       body: RefreshIndicator(
         onRefresh: _loadInitialData,
         child: SingleChildScrollView(
+          controller: _scrollController,
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

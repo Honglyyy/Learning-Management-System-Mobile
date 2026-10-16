@@ -99,4 +99,44 @@ class EnrollmentModel {
   bool get isCompleted => (status == 'COMPLETED' || progressPercent >= 100.0) && !isEnrollmentExpired;
   bool get isActive => status == 'ACTIVE' && !isEnrollmentExpired;
   bool get isExpiringSoon => daysRemaining != null && daysRemaining! <= 7 && daysRemaining! >= 0;
+
+  EnrollmentModel copyWith({
+    int? enrollmentId,
+    int? userId,
+    String? userName,
+    String? userEmail,
+    int? courseId,
+    String? courseTitle,
+    String? courseCoverUrl,
+    String? instructorName,
+    String? status,
+    int? earnedPoints,
+    int? totalPoints,
+    double? progressPercent,
+    dynamic enrolledAt,
+    dynamic completedAt,
+    dynamic expirationDate,
+    bool? isExpired,
+    int? daysRemaining,
+  }) {
+    return EnrollmentModel(
+      enrollmentId: enrollmentId ?? this.enrollmentId,
+      userId: userId ?? this.userId,
+      userName: userName ?? this.userName,
+      userEmail: userEmail ?? this.userEmail,
+      courseId: courseId ?? this.courseId,
+      courseTitle: courseTitle ?? this.courseTitle,
+      courseCoverUrl: courseCoverUrl ?? this.courseCoverUrl,
+      instructorName: instructorName ?? this.instructorName,
+      status: status ?? this.status,
+      earnedPoints: earnedPoints ?? this.earnedPoints,
+      totalPoints: totalPoints ?? this.totalPoints,
+      progressPercent: progressPercent ?? this.progressPercent,
+      enrolledAt: enrolledAt ?? this.enrolledAt,
+      completedAt: completedAt ?? this.completedAt,
+      expirationDate: expirationDate ?? this.expirationDate,
+      isExpired: isExpired ?? this.isExpired,
+      daysRemaining: daysRemaining ?? this.daysRemaining,
+    );
+  }
 }

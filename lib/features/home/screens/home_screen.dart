@@ -22,32 +22,69 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   List<CourseModel> _featuredCourses = [];
   List<CourseModel> _popularCourses = [];
   List<CategoryModel> _categories = [];
+  List<CourseModel> _allCourses = [];
   ContinueLearningItem? _continueLearning;
   StudentProfile? _profile;
 
+  int _allCoursesVisibleCount = 4;
+  bool _isLoadingMore = false;
   bool _isLoading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _loadHomeData();
   }
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _loadHomeData() async {
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (maxScroll - currentScroll <= 250) {
+      _loadMoreCourses();
+    }
+  }
+
+  void _loadMoreCourses() {
+    if (_isLoadingMore || _isLoading) return;
+    if (_allCoursesVisibleCount >= _allCourses.length) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (mounted) {
+        setState(() {
+          _allCoursesVisibleCount = (_allCoursesVisibleCount + 4).clamp(0, _allCourses.length);
+          _isLoadingMore = false;
+        });
+      }
+    });
+  }
+
+  Future<void> _loadHomeData({bool resetPagination = true}) async {
     setState(() {
       _isLoading = true;
       _error = null;
+      if (resetPagination) {
+        _allCoursesVisibleCount = 4;
+      }
     });
 
     try {
@@ -63,6 +100,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         courseRepo.getFeatured().catchError((_) => <CourseModel>[]),
         courseRepo.getPopular().catchError((_) => <CourseModel>[]),
         categoryRepo.getCategories().catchError((_) => <CategoryModel>[]),
+        courseRepo.getCourses().catchError((_) => <CourseModel>[]),
         if (isAuth)
           enrollmentRepo.getContinueLearning().catchError((_) => null)
         else
@@ -78,8 +116,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _featuredCourses = results[0] as List<CourseModel>;
           _popularCourses = results[1] as List<CourseModel>;
           _categories = results[2] as List<CategoryModel>;
-          _continueLearning = results[3] as ContinueLearningItem?;
-          _profile = results[4] as StudentProfile?;
+          _allCourses = results[3] as List<CourseModel>;
+          _continueLearning = results[4] as ContinueLearningItem?;
+          _profile = results[5] as StudentProfile?;
           _isLoading = false;
         });
       }
@@ -109,7 +148,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         await courseRepo.addFavorite(course.courseId);
         ToastService.showSuccess('Added to wishlist');
       }
-      _loadHomeData();
+      _loadHomeData(resetPagination: false);
     } catch (e) {
       ToastService.showError(e.toString());
     }
@@ -522,6 +561,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }) {
     if (courses.isEmpty) return const SizedBox.shrink();
 
+    // Show 3 courses in a row as requested
+    final rowCourses = courses.take(3).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -539,27 +581,112 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        SizedBox(
-          height: 250,
-          child: ScrollConfiguration(
-            behavior: ScrollConfiguration.of(context).copyWith(
-              dragDevices: {
-                PointerDeviceKind.touch,
-                PointerDeviceKind.mouse,
-                PointerDeviceKind.trackpad,
-                PointerDeviceKind.stylus,
-              },
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (int i = 0; i < rowCourses.length; i++) ...[
+              if (i > 0) const SizedBox(width: 8),
+              Expanded(
+                child: CourseCard(
+                  course: CourseCardItem(
+                    courseId: rowCourses[i].courseId,
+                    title: rowCourses[i].title,
+                    coverUrl: rowCourses[i].coverUrl,
+                    instructor: rowCourses[i].instructor,
+                    rating: rowCourses[i].rating,
+                    price: rowCourses[i].price,
+                    level: rowCourses[i].level,
+                    duration: rowCourses[i].overallDuration,
+                    enrollmentCount: rowCourses[i].enrollmentCount,
+                    accessDurationDays: rowCourses[i].accessDurationDays,
+                    isExpired: rowCourses[i].isExpired,
+                    discountedPrice: rowCourses[i].discountedPrice,
+                    isEnrolled: rowCourses[i].isEnrolled,
+                    isFavorite: rowCourses[i].isFavorite,
+                  ),
+                  isListView: false,
+                  isCompact: true,
+                  onTap: () => context.push('/courses/${rowCourses[i].courseId}'),
+                  onFavoriteToggle: () => _toggleFavorite(rowCourses[i]),
+                ),
+              ),
+            ],
+            if (rowCourses.length < 3)
+              for (int i = 0; i < 3 - rowCourses.length; i++) ...[
+                const SizedBox(width: 8),
+                const Expanded(child: SizedBox.shrink()),
+              ],
+          ],
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildAllCoursesGridSection(ThemeData theme) {
+    if (_allCourses.isEmpty) return const SizedBox.shrink();
+
+    final displayed = _allCourses.take(_allCoursesVisibleCount).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  '📚 All Courses',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    '${_allCourses.length}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: courses.length.clamp(0, 8),
-              separatorBuilder: (_, index) => const SizedBox(width: 14),
+            TextButton(
+              onPressed: () => context.go('/catalog'),
+              child: const Text('See All in Catalog'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            // 2-column grid layout on mobile (2x2 grid layout)
+            final crossAxisCount = width > 900 ? 4 : (width > 600 ? 3 : 2);
+            final spacing = 12.0;
+            final cardWidth = (width - ((crossAxisCount - 1) * spacing)) / crossAxisCount;
+            final childAspectRatio = (cardWidth / 225).clamp(0.68, 0.85);
+
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: spacing,
+                mainAxisSpacing: spacing,
+                childAspectRatio: childAspectRatio,
+              ),
+              itemCount: displayed.length,
               itemBuilder: (context, index) {
-                final c = courses[index];
-                return SizedBox(
-                  width: 200,
-                  child: CourseCard(
+                final c = displayed[index];
+                return CourseCard(
                   course: CourseCardItem(
                     courseId: c.courseId,
                     title: c.title,
@@ -579,13 +706,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   isListView: false,
                   onTap: () => context.push('/courses/${c.courseId}'),
                   onFavoriteToggle: () => _toggleFavorite(c),
-                ),
-              );
-            },
-          ),
+                );
+              },
+            );
+          },
         ),
-      ),
-      const SizedBox(height: 20),
+        if (_isLoadingMore) ...[
+          const SizedBox(height: 16),
+          const Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+          ),
+        ],
+        if (_allCoursesVisibleCount >= _allCourses.length && _allCourses.length > 4) ...[
+          const SizedBox(height: 18),
+          Center(
+            child: Text(
+              'Showing all ${_allCourses.length} courses',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -596,13 +745,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     // Listen to reactive progress updates to refresh automatically
     ref.listen<int>(courseProgressRefreshProvider, (prev, next) {
-      _loadHomeData();
+      _loadHomeData(resetPagination: false);
     });
 
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: _loadHomeData,
+        onRefresh: () => _loadHomeData(resetPagination: true),
         child: SingleChildScrollView(
+          controller: _scrollController,
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(16.0),
           child: Column(
@@ -610,27 +760,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               _buildGreetingHeader(theme),
               _buildSearchBar(theme),
-              ApiAlert(error: _error, onRetry: _loadHomeData),
+              ApiAlert(error: _error, onRetry: () => _loadHomeData(resetPagination: true)),
               if (_isLoading) ...[
                 const SizedBox(height: 16),
                 const LoadingSkeleton(width: double.infinity, height: 120),
                 const SizedBox(height: 20),
                 const LoadingSkeleton(width: double.infinity, height: 40),
                 const SizedBox(height: 20),
-                const LoadingSkeleton(width: double.infinity, height: 200),
+                const Row(
+                  children: [
+                    Expanded(child: LoadingSkeleton(width: double.infinity, height: 160)),
+                    SizedBox(width: 8),
+                    Expanded(child: LoadingSkeleton(width: double.infinity, height: 160)),
+                    SizedBox(width: 8),
+                    Expanded(child: LoadingSkeleton(width: double.infinity, height: 160)),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Row(
+                  children: [
+                    Expanded(child: LoadingSkeleton(width: double.infinity, height: 220)),
+                    SizedBox(width: 12),
+                    Expanded(child: LoadingSkeleton(width: double.infinity, height: 220)),
+                  ],
+                ),
               ] else ...[
                 _buildContinueLearningCard(theme),
                 _buildCategoriesSection(theme),
                 _buildHorizontalCourseSection(
                   title: '🌟 Featured Courses',
                   courses: _featuredCourses,
-                  onViewAll: () => context.go('/catalog'),
+                  onViewAll: () => context.go('/catalog?tab=featured'),
                 ),
                 _buildHorizontalCourseSection(
                   title: '🔥 Most Popular',
                   courses: _popularCourses,
-                  onViewAll: () => context.go('/catalog'),
+                  onViewAll: () => context.go('/catalog?tab=popular'),
                 ),
+                _buildAllCoursesGridSection(theme),
               ],
             ],
           ),

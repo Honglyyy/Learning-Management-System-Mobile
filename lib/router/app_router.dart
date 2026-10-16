@@ -75,6 +75,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => CatalogScreen(
               initialQuery: state.uri.queryParameters['query'],
               initialCategoryId: int.tryParse(state.uri.queryParameters['categoryId'] ?? ''),
+              initialTab: state.uri.queryParameters['tab'],
             ),
           ),
           GoRoute(
@@ -82,6 +83,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => CatalogScreen(
               initialQuery: state.uri.queryParameters['query'],
               initialCategoryId: int.tryParse(state.uri.queryParameters['categoryId'] ?? ''),
+              initialTab: state.uri.queryParameters['tab'],
             ),
           ),
           GoRoute(

@@ -46,11 +46,11 @@ class QuestionModel {
   int get points => point;
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
-    final rawAnswers = json['answers'] as List<dynamic>? ?? [];
+    final rawAnswers = (json['answers'] ?? json['answer']) as List<dynamic>? ?? [];
     return QuestionModel(
       questionId: json['questionId'] as int? ?? json['id'] as int? ?? 0,
       questionText: json['questionText'] ?? json['text'] ?? '',
-      point: json['point'] as int? ?? 1,
+      point: (json['point'] ?? json['points'] as num?)?.toInt() ?? 1,
       quizId: json['quizId'] as int?,
       answers: rawAnswers.map((a) => AnswerModel.fromJson(a)).toList(),
     );
@@ -83,7 +83,7 @@ class QuizModel {
   int get totalPoints => totalPoint;
 
   factory QuizModel.fromJson(Map<String, dynamic> json) {
-    final rawQuestions = json['questions'] as List<dynamic>? ?? [];
+    final rawQuestions = (json['questions'] ?? json['question']) as List<dynamic>? ?? [];
     return QuizModel(
       quizId: json['quizId'] as int? ?? json['id'] as int? ?? 0,
       quizTitle: json['quizTitle'] ?? json['title'] ?? '',

@@ -43,6 +43,7 @@ class CourseCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onFavoriteToggle;
   final bool isListView;
+  final bool isCompact;
 
   const CourseCard({
     super.key,
@@ -50,6 +51,7 @@ class CourseCard extends StatelessWidget {
     this.onTap,
     this.onFavoriteToggle,
     this.isListView = false,
+    this.isCompact = false,
   });
 
   @override
@@ -198,16 +200,16 @@ class CourseCard extends StatelessWidget {
             Stack(
               children: [
                 SizedBox(
-                  height: 105,
+                  height: isCompact ? 72 : 105,
                   width: double.infinity,
-                  child: _buildCoverImage(imageUrl),
+                  child: _buildCoverImage(imageUrl, isCompact: isCompact),
                 ),
                 if (onFavoriteToggle != null)
                   Positioned(
-                    top: 8,
-                    right: 8,
+                    top: isCompact ? 4 : 8,
+                    right: isCompact ? 4 : 8,
                     child: Container(
-                      padding: const EdgeInsets.all(4),
+                      padding: EdgeInsets.all(isCompact ? 3 : 4),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.4),
                         shape: BoxShape.circle,
@@ -217,130 +219,166 @@ class CourseCard extends StatelessWidget {
                         child: Icon(
                           course.isFavorite ? Icons.favorite : Icons.favorite_border,
                           color: course.isFavorite ? Colors.red : Colors.white,
-                          size: 18,
+                          size: isCompact ? 13 : 18,
                         ),
                       ),
                     ),
                   ),
                 if (course.isExpired)
                   Positioned(
-                    top: 8,
-                    left: 8,
+                    top: isCompact ? 4 : 8,
+                    left: isCompact ? 4 : 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: EdgeInsets.symmetric(horizontal: isCompact ? 4 : 6, vertical: isCompact ? 1.5 : 2),
                       decoration: BoxDecoration(
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text('EXPIRED', style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        'EXPIRED',
+                        style: TextStyle(
+                          fontSize: isCompact ? 8 : 10,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 if (course.level != null)
                   Positioned(
-                    bottom: 8,
-                    left: 8,
-                    child: _buildLevelChip(theme, course.level!, isOverlay: true),
+                    bottom: isCompact ? 4 : 8,
+                    left: isCompact ? 4 : 8,
+                    child: _buildLevelChip(theme, course.level!, isOverlay: true, isCompact: isCompact),
                   ),
               ],
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
+              padding: isCompact
+                  ? const EdgeInsets.fromLTRB(6, 6, 6, 6)
+                  : const EdgeInsets.fromLTRB(10, 7, 10, 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    course.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  SizedBox(
+                    height: isCompact ? 28 : null,
+                    child: Text(
+                      course.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: isCompact ? 11 : 13,
+                        height: isCompact ? 1.25 : null,
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 2),
                   if (course.instructor != null)
                     Text(
                       course.instructor!,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: isCompact ? 9.5 : 11,
                         color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.7),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  const SizedBox(height: 5),
+                  SizedBox(height: isCompact ? 3 : 5),
                   Row(
                     children: [
-                      _buildRating(course.rating),
-                      if (course.enrollmentCount != null) ...[
-                        const SizedBox(width: 4),
+                      _buildRating(course.rating, isCompact: isCompact),
+                      if (!isCompact && course.enrollmentCount != null) ...[
+                        const SizedBox(width: 3),
                         Text(
                           '(${course.enrollmentCount})',
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10.5,
                             color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                           ),
                         ),
                       ],
-                      const Spacer(),
-                      if (course.duration != null && course.duration!.isNotEmpty) ...[
-                        Icon(Icons.schedule, size: 11, color: theme.hintColor),
-                        const SizedBox(width: 2),
-                        Text(
-                          course.duration!,
-                          style: TextStyle(fontSize: 10, color: theme.hintColor),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (course.duration != null && course.duration!.isNotEmpty) ...[
+                                Icon(Icons.schedule, size: isCompact ? 9.5 : 11, color: theme.hintColor),
+                                const SizedBox(width: 2),
+                                Text(
+                                  course.duration!,
+                                  style: TextStyle(fontSize: isCompact ? 9 : 10, color: theme.hintColor),
+                                ),
+                                if (!isCompact && course.accessDurationDays != null) const SizedBox(width: 4),
+                              ],
+                              if ((!isCompact || course.duration == null || course.duration!.isEmpty) &&
+                                  (course.duration == null || course.duration!.isEmpty || course.accessDurationDays != null)) ...[
+                                Icon(Icons.timer_outlined, size: isCompact ? 9.5 : 11, color: theme.hintColor),
+                                const SizedBox(width: 2),
+                                Text(
+                                  '${course.accessDurationDays ?? 180}d',
+                                  style: TextStyle(fontSize: isCompact ? 9 : 10, color: theme.hintColor),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                        if (course.accessDurationDays != null) const SizedBox(width: 4),
-                      ],
-                      if (course.duration == null || course.duration!.isEmpty || course.accessDurationDays != null) ...[
-                        Icon(Icons.timer_outlined, size: 11, color: theme.hintColor),
-                        const SizedBox(width: 2),
-                        Text(
-                          '${course.accessDurationDays ?? 180}d',
-                          style: TextStyle(fontSize: 10, color: theme.hintColor),
-                        ),
-                      ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 5),
+                  SizedBox(height: isCompact ? 3 : 5),
                   if (course.isExpired)
-                    Row(
-                      children: [
-                        Text(
-                          Formatters.formatCurrency(course.price),
-                          style: TextStyle(
-                            decoration: TextDecoration.lineThrough,
-                            fontSize: 11,
-                            color: theme.hintColor,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Row(
+                        children: [
+                          Text(
+                            Formatters.formatCurrency(course.price),
+                            style: TextStyle(
+                              decoration: TextDecoration.lineThrough,
+                              fontSize: isCompact ? 9.5 : 11,
+                              color: theme.hintColor,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          Formatters.formatCurrency(course.discountedPrice ?? ((course.price ?? 0) * 0.5)),
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: theme.colorScheme.primary,
+                          const SizedBox(width: 3),
+                          Text(
+                            Formatters.formatCurrency(course.discountedPrice ?? ((course.price ?? 0) * 0.5)),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: isCompact ? 12 : 14,
+                              color: theme.colorScheme.primary,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
+                          const SizedBox(width: 3),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: isCompact ? 3 : 4, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Text(
+                              '-50%',
+                              style: TextStyle(fontSize: isCompact ? 8 : 9, color: Colors.green, fontWeight: FontWeight.bold),
+                            ),
                           ),
-                          child: const Text(
-                            '-50%',
-                            style: TextStyle(fontSize: 9, color: Colors.green, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ],
+                        ],
+                      ),
                     )
                   else
-                    Text(
-                      Formatters.formatCurrency(course.price),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14.5,
-                        color: theme.colorScheme.primary,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        Formatters.formatCurrency(course.price),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: isCompact ? 12.5 : 14.5,
+                          color: theme.colorScheme.primary,
+                        ),
                       ),
                     ),
                 ],
@@ -352,12 +390,12 @@ class CourseCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCoverImage(String url) {
+  Widget _buildCoverImage(String url, {bool isCompact = false}) {
     if (url.isEmpty) {
       return Container(
         color: const Color(0xFF1E293B),
-        child: const Center(
-          child: Icon(Icons.school, size: 36, color: Colors.white54),
+        child: Center(
+          child: Icon(Icons.school, size: isCompact ? 24 : 36, color: Colors.white54),
         ),
       );
     }
@@ -368,8 +406,8 @@ class CourseCard extends StatelessWidget {
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) => Container(
           color: const Color(0xFF1E293B),
-          child: const Center(
-            child: Icon(Icons.broken_image, size: 32, color: Colors.white54),
+          child: Center(
+            child: Icon(Icons.broken_image, size: isCompact ? 22 : 32, color: Colors.white54),
           ),
         ),
       );
@@ -381,39 +419,49 @@ class CourseCard extends StatelessWidget {
       placeholder: (context, _) => Container(color: Colors.grey.withValues(alpha: 0.2)),
       errorWidget: (context, url, error) => Container(
         color: const Color(0xFF1E293B),
-        child: const Center(
-          child: Icon(Icons.broken_image, size: 32, color: Colors.white54),
+        child: Center(
+          child: Icon(Icons.broken_image, size: isCompact ? 22 : 32, color: Colors.white54),
         ),
       ),
     );
   }
 
-  Widget _buildLevelChip(ThemeData theme, String level, {bool isOverlay = false}) {
+  Widget _buildLevelChip(ThemeData theme, String level, {bool isOverlay = false, bool isCompact = false}) {
     Color bg = isOverlay ? Colors.black.withValues(alpha: 0.7) : theme.colorScheme.secondary;
     Color fg = isOverlay ? Colors.white : theme.colorScheme.onSecondary;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 4 : 6,
+        vertical: isCompact ? 1.5 : 2,
+      ),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(4),
       ),
       child: Text(
         level.replaceAll('_', ' '),
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: fg),
+        style: TextStyle(
+          fontSize: isCompact ? 8.5 : 10,
+          fontWeight: FontWeight.w600,
+          color: fg,
+        ),
       ),
     );
   }
 
-  Widget _buildRating(double rating) {
+  Widget _buildRating(double rating, {bool isCompact = false}) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.star, color: Colors.amber, size: 14),
-        const SizedBox(width: 3),
+        Icon(Icons.star, color: Colors.amber, size: isCompact ? 11 : 14),
+        SizedBox(width: isCompact ? 2 : 3),
         Text(
           rating.toStringAsFixed(1),
-          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: isCompact ? 10 : 12,
+          ),
         ),
       ],
     );

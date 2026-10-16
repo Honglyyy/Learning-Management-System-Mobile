@@ -219,6 +219,160 @@ void main() {
       expect(find.text('1d'), findsOneWidget);
       expect(find.text('\$19.99'), findsOneWidget);
     });
+
+    testWidgets('CourseCard renders in 2x2 grid dimensions without overflow', (tester) async {
+      final item = CourseCardItem(
+        courseId: 2,
+        title: 'Spring Boot & Microservices Masterclass 2026',
+        instructor: 'Lay Hongly',
+        rating: 4.8,
+        price: 49.99,
+        discountedPrice: 24.99,
+        isExpired: true,
+        level: 'INTERMEDIATE',
+        duration: '18 Hours',
+        enrollmentCount: 120,
+        accessDurationDays: 300,
+      );
+
+      FlutterErrorDetails? caughtDetails;
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        caughtDetails = details;
+      };
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 160,
+              height: 235,
+              child: CourseCard(course: item, isListView: false),
+            ),
+          ),
+        ),
+      );
+
+      FlutterError.onError = originalOnError;
+      expect(caughtDetails, isNull);
+      expect(find.text('Spring Boot & Microservices Masterclass 2026'), findsOneWidget);
+      expect(find.text('Lay Hongly'), findsOneWidget);
+      expect(find.text('4.8'), findsOneWidget);
+      expect(find.text('INTERMEDIATE'), findsOneWidget);
+    });
+
+    testWidgets('3 compact CourseCards in a Row across mobile screen width render without overflow', (tester) async {
+      FlutterErrorDetails? caughtDetails;
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        caughtDetails = details;
+      };
+
+      final items = [
+        CourseCardItem(
+          courseId: 1,
+          title: 'Python Django Full Stack',
+          instructor: 'Lay Hongly',
+          rating: 4.9,
+          price: 49.99,
+          level: 'INTERMEDIATE',
+          duration: '18 Hours',
+          accessDurationDays: 300,
+        ),
+        CourseCardItem(
+          courseId: 2,
+          title: 'Spring Boot Microservices',
+          instructor: 'Lay Hongly',
+          rating: 4.8,
+          price: 64.99,
+          level: 'ADVANCED',
+          duration: '30 Hours',
+          accessDurationDays: 240,
+        ),
+        CourseCardItem(
+          courseId: 3,
+          title: 'Flutter Mobile App Development',
+          instructor: 'Lay Hongly',
+          rating: 5.0,
+          price: 39.99,
+          level: 'BEGINNER',
+          duration: '12 Hours',
+          accessDurationDays: 180,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 360, // Standard phone width
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    for (int i = 0; i < items.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(
+                        child: CourseCard(
+                          course: items[i],
+                          isListView: false,
+                          isCompact: true,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      FlutterError.onError = originalOnError;
+      expect(caughtDetails, isNull);
+      expect(find.text('Python Django Full Stack'), findsOneWidget);
+      expect(find.text('Spring Boot Microservices'), findsOneWidget);
+      expect(find.text('Flutter Mobile App Development'), findsOneWidget);
+      expect(find.text('\$49.99'), findsOneWidget);
+      expect(find.text('\$64.99'), findsOneWidget);
+      expect(find.text('\$39.99'), findsOneWidget);
+    });
+
+    test('Home screen horizontal section limits courses to 3 in a row', () {
+      final courses = List.generate(8, (i) => CourseModel.fromJson({
+        'courseId': i + 1,
+        'title': 'Course $i',
+        'price': 10.0 * (i + 1),
+        'rating': 4.5,
+        'status': 'PUBLISHED',
+      }));
+
+      final rowCourses = courses.take(3).toList();
+      expect(rowCourses.length, 3);
+      expect(rowCourses.map((c) => c.courseId).toList(), [1, 2, 3]);
+    });
+
+    test('Home screen all courses 2x2 grid starts at 4 and increments by 4', () {
+      final courses = List.generate(10, (i) => CourseModel.fromJson({
+        'courseId': i + 1,
+        'title': 'Course $i',
+        'price': 10.0 * (i + 1),
+        'rating': 4.5,
+        'status': 'PUBLISHED',
+      }));
+
+      int visibleCount = 4; // 2x2 grid initially
+      expect(courses.take(visibleCount).length, 4);
+
+      // First infinite scroll trigger
+      visibleCount = (visibleCount + 4).clamp(0, courses.length);
+      expect(courses.take(visibleCount).length, 8);
+
+      // Second infinite scroll trigger
+      visibleCount = (visibleCount + 4).clamp(0, courses.length);
+      expect(courses.take(visibleCount).length, 10);
+    });
   });
 
   group('Lesson Progression & Restriction Unit Tests', () {

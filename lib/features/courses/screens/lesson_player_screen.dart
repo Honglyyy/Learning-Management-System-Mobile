@@ -264,9 +264,9 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
     if (!mounted) return;
 
     if (_isEnrolled) {
-      // For enrolled student, auto-complete lesson progress if not yet completed
+      // For enrolled student, show the completion prompt (which gates on quiz score)
       if (_progress?.isCompleted != true) {
-        _handleMarkComplete();
+        _showLessonCompletionPrompt();
       }
       return;
     }
@@ -617,6 +617,227 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
     }
 
     context.go('/courses/${widget.courseId}');
+  }
+
+  /// The minimum quiz score (percentage) required to mark a lesson complete.
+  static const double _quizPassThreshold = 90.0;
+
+  /// Returns the student's best quiz score percentage for this lesson, or null
+  /// if no quiz exists or no attempt has been made.
+  Future<double?> _quizBestPercent() async {
+    if (_quiz == null) return null;
+    try {
+      final attempt = await ref
+          .read(quizRepositoryProvider)
+          .getQuizAttemptMe(_quiz!.quizId);
+      return attempt?.percent;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Shows a bottom-sheet prompt asking the student to confirm lesson
+  /// completion.  If a quiz is attached to this lesson the student must
+  /// have scored ≥ 90 % before the "Mark Complete" action is enabled.
+  void _showLessonCompletionPrompt() async {
+    final authRepo = ref.read(authRepositoryProvider);
+    if (!authRepo.isAuthenticated || !_isEnrolled) {
+      ToastService.showInfo('Please enroll in the course to save progress.');
+      _showPayToUnlockSheet(null);
+      return;
+    }
+
+    if (_progress?.isCompleted == true) return;
+
+    final theme = Theme.of(context);
+    final hasQuiz = _quiz != null;
+    double? bestPercent;
+
+    if (hasQuiz) {
+      bestPercent = await _quizBestPercent();
+    }
+
+    final quizPassed = !hasQuiz || (bestPercent != null && bestPercent >= _quizPassThreshold);
+
+    if (!mounted) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag handle
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 20),
+                  decoration: BoxDecoration(
+                    color: theme.dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+
+                // Icon
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: quizPassed
+                        ? Colors.green.withValues(alpha: 0.15)
+                        : Colors.orange.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    quizPassed
+                        ? Icons.check_circle_outline_rounded
+                        : Icons.quiz_outlined,
+                    size: 40,
+                    color: quizPassed ? Colors.green : Colors.orange,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Title
+                Text(
+                  quizPassed
+                      ? 'Mark Lesson as Complete?'
+                      : 'Quiz Required to Complete',
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Description
+                if (quizPassed) ...[
+                  Text(
+                    "You've met all the requirements for \"${_lesson?.title}\". "
+                    'Would you like to mark this lesson as complete and move on?',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.hintColor,
+                      height: 1.4,
+                    ),
+                  ),
+                ] else ...[
+                  Text(
+                    'You need to score at least ${_quizPassThreshold.toStringAsFixed(0)}% on the lesson quiz '
+                    'before you can mark this lesson as complete.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: theme.hintColor,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Current best score badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: theme.dividerColor),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Your Best Score',
+                              style: TextStyle(fontSize: 11, color: theme.hintColor),
+                            ),
+                            Text(
+                              bestPercent != null
+                                  ? '${bestPercent.toStringAsFixed(0)}%'
+                                  : 'Not attempted yet',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: bestPercent != null ? Colors.red : theme.hintColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              'Required',
+                              style: TextStyle(fontSize: 11, color: theme.hintColor),
+                            ),
+                            Text(
+                              '${_quizPassThreshold.toStringAsFixed(0)}%',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Colors.green,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+
+                // Primary action button
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    icon: Icon(
+                      quizPassed ? Icons.check_circle : Icons.quiz_outlined,
+                      size: 18,
+                    ),
+                    label: Text(
+                      quizPassed
+                          ? 'Yes, Mark as Complete'
+                          : bestPercent != null
+                              ? 'Retake Quiz'
+                              : 'Take the Quiz',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor: quizPassed ? Colors.green : null,
+                      foregroundColor: quizPassed ? Colors.white : null,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(sheetContext);
+                      if (quizPassed) {
+                        _handleMarkComplete();
+                      } else {
+                        context.push('/lessons/${widget.lessonId}/quiz');
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(height: 10),
+
+                // Secondary action
+                TextButton(
+                  onPressed: () => Navigator.pop(sheetContext),
+                  child: Text(quizPassed ? 'Not Yet' : 'Cancel'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _handleMarkComplete() async {
@@ -996,7 +1217,7 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
                           label: Text(_progress?.isCompleted == true ? 'Completed' : 'Mark Complete'),
                           onPressed: _isMarkingComplete || _progress?.isCompleted == true
                               ? null
-                              : _handleMarkComplete,
+                              : _showLessonCompletionPrompt,
                         )
                       else
                         InkWell(
@@ -1092,7 +1313,7 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
                                     }
                                   : () {
                                       ToastService.showInfo(
-                                        'Please complete this lesson before proceeding to the next lesson.',
+                                        'Please complete this lesson before proceeding. If this lesson has a quiz, you need to score at least 90%.',
                                       );
                                     },
                         )

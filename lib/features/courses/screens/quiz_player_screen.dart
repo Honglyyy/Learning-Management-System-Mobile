@@ -195,7 +195,7 @@ class _QuizPlayerScreenState extends ConsumerState<QuizPlayerScreen> {
   Widget _buildResultCard(QuizAttemptModel result) {
     final theme = Theme.of(context);
     final percent = result.percent;
-    final isPassed = percent >= 70.0;
+    final isPassed = percent >= 90.0;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 20),
@@ -569,11 +569,11 @@ class _QuizPlayerScreenState extends ConsumerState<QuizPlayerScreen> {
                           style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                         ),
                         Text(
-                          _previousAttempt!.percent >= 70 ? 'PASSED' : 'FAILED',
+                          _previousAttempt!.percent >= 90 ? 'PASSED' : 'FAILED',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: _previousAttempt!.percent >= 70 ? Colors.green : Colors.red,
+                            color: _previousAttempt!.percent >= 90 ? Colors.green : Colors.red,
                           ),
                         ),
                       ],

@@ -5,9 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8aecc561-8ddc-4901-8be2-2c857a8bc7e8" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/backend" beforeDir="false" afterPath="$PROJECT_DIR$/backend" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ly/lmsbackend/dto/enrollmentdtos/EnrollmentResponseDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ly/lmsbackend/dto/enrollmentdtos/EnrollmentResponseDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/ly/lmsbackend/mapper/EnrollmentMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/ly/lmsbackend/mapper/EnrollmentMapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/android/build/reports/problems/problems-report.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -16,6 +17,9 @@
   </component>
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="1574" />
   </component>
   <component name="FileEditorManager">
     <leaf>
@@ -53,6 +57,65 @@
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
+  </component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.220675749072664" />
+      <entry key="MS500" value="1.741200451970327" />
+      <entry key="S2" value="2.7871762224165195" />
+      <entry key="S5" value="5.266976608961968" />
+      <entry key="S10" value="7.423037284008794" />
+      <entry key="S30" value="10.000441863466476" />
+      <entry key="S60" value="10.917691767103864" />
+      <entry key="M2" value="11.435787682982742" />
+      <entry key="M5" value="11.768432358296874" />
+      <entry key="M10" value="11.88320489900756" />
+      <entry key="M15" value="11.921909520621872" />
+      <entry key="M30" value="11.960840626965881" />
+      <entry key="H1" value="11.98039166815499" />
+      <entry key="H2" value="11.99018865869209" />
+      <entry key="H4" value="11.995092533739605" />
+      <entry key="D1" value="11.999181839417266" />
+      <entry key="W1" value="11.999883113803635" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="0.0" />
+      <entry key="M2" value="0.0" />
+      <entry key="M5" value="0.0" />
+      <entry key="M10" value="0.0" />
+      <entry key="M15" value="0.0" />
+      <entry key="M30" value="0.0" />
+      <entry key="H1" value="0.0" />
+      <entry key="H2" value="0.0" />
+      <entry key="H4" value="0.0" />
+      <entry key="D1" value="0.0" />
+      <entry key="W1" value="0.0" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="1.1236534631441273" />
+      <entry key="MS500" value="1.718865549354844" />
+      <entry key="S2" value="2.773458815483884" />
+      <entry key="S5" value="5.250672314148321" />
+      <entry key="S10" value="7.409521419810938" />
+      <entry key="S30" value="9.993574896684066" />
+      <entry key="S60" value="10.913814640985862" />
+      <entry key="M2" value="11.433721627436581" />
+      <entry key="M5" value="11.76757288894758" />
+      <entry key="M10" value="11.882769436981384" />
+      <entry key="M15" value="11.92161792301539" />
+      <entry key="M30" value="11.960694179098994" />
+      <entry key="H1" value="11.980318281149659" />
+      <entry key="H2" value="11.990151924320221" />
+      <entry key="H4" value="11.995074156323684" />
+      <entry key="D1" value="11.999178775092705" />
+      <entry key="W1" value="11.999882676008149" />
+    </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 2,

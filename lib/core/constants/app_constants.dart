@@ -1,6 +1,6 @@
 class AppConstants {
-  // static const String apiBaseUrl = 'https://learning-management-system-fk98.onrender.com';
-  static const String apiBaseUrl = 'http://localhost:8080';
+  static const String apiBaseUrl = 'https://learning-management-system-fk98.onrender.com';
+  // static const String apiBaseUrl = 'http://localhost:8080';
 
   // Storage Keys
   static const String keyToken = 'token';

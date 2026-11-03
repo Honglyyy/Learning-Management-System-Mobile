@@ -1,3 +1,5 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../constants/app_constants.dart';
 
 String mediaUrl(String? path) {
@@ -9,24 +11,41 @@ String mediaUrl(String? path) {
     return '';
   }
 
+  String url = trimmed;
+
   // Full URL or data URI
   if (trimmed.startsWith('http://') ||
       trimmed.startsWith('https://') ||
       trimmed.startsWith('data:image/')) {
-    return trimmed;
+    url = trimmed;
+  } else {
+    // Check if string contains a path separator or media extension
+    final hasSlash = trimmed.contains('/');
+    final hasMediaExt = RegExp(
+      r'\.(jpg|jpeg|png|webp|gif|svg|mp4|m4v|mov|webm|m3u8|ts|ogg|mkv|avi|mp3|wav|m4a|aac|flac)(\?.*)?$',
+      caseSensitive: false,
+    ).hasMatch(trimmed);
+
+    // If it's just arbitrary dummy text without slashes or media extension, it's not a media URL
+    if (!hasSlash && !hasMediaExt) {
+      return '';
+    }
+
+    final base = AppConstants.apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
+    final cleanPath = trimmed.startsWith('/') ? trimmed : '/$trimmed';
+    url = '$base$cleanPath';
   }
 
-  // Check if string contains a path separator or image extension
-  final hasSlash = trimmed.contains('/');
-  final hasImageExt = RegExp(r'\.(jpg|jpeg|png|webp|gif|svg)(\?.*)?$', caseSensitive: false).hasMatch(trimmed);
-
-  // If it's just arbitrary dummy text (e.g. "asdfgh") without slashes or file extension, it's not an image URL
-  if (!hasSlash && !hasImageExt) {
-    return '';
+  // Rewrite localhost for Android emulator
+  if (!kIsWeb) {
+    try {
+      if (Platform.isAndroid) {
+        url = url
+            .replaceAll('http://localhost:', 'http://10.0.2.2:')
+            .replaceAll('http://127.0.0.1:', 'http://10.0.2.2:');
+      }
+    } catch (_) {}
   }
 
-  final base = AppConstants.apiBaseUrl.replaceAll(RegExp(r'/+$'), '');
-  final cleanPath = trimmed.startsWith('/') ? trimmed : '/$trimmed';
-  return '$base$cleanPath';
+  return url;
 }
-

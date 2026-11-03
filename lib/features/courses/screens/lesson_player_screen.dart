@@ -42,6 +42,8 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
   Timer? _progressSaveTimer;
 
   bool _isLoading = true;
+  bool _isVideoLoading = false;
+  String? _videoError;
   bool _isMarkingComplete = false;
   bool _hasShownCompletionPrompt = false;
   bool _isLockedByPrerequisite = false;
@@ -70,6 +72,8 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
     _chewieController = null;
     _videoController?.dispose();
     _videoController = null;
+    _isVideoLoading = false;
+    _videoError = null;
   }
 
   @override
@@ -194,15 +198,47 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
 
   Future<void> _initVideo(LessonModel lesson, LessonProgress progress) async {
     final videoPath = lesson.playableVideoUrl;
-    if (videoPath.isEmpty) return;
+    if (videoPath.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _isVideoLoading = false;
+          _videoError = null;
+        });
+      }
+      return;
+    }
 
     final resolvedUrl = mediaUrl(videoPath);
     final uri = Uri.tryParse(resolvedUrl);
-    if (uri == null) return;
+    if (uri == null) {
+      if (mounted) {
+        setState(() {
+          _isVideoLoading = false;
+          _videoError = 'Invalid video URL: $resolvedUrl';
+        });
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _isVideoLoading = true;
+        _videoError = null;
+      });
+    }
 
     try {
-      _videoController = VideoPlayerController.networkUrl(uri);
-      await _videoController!.initialize();
+      final controller = VideoPlayerController.networkUrl(uri);
+      await controller.initialize();
+
+      if (!mounted) {
+        await controller.dispose();
+        return;
+      }
+
+      _videoController?.removeListener(_onVideoPlayerUpdate);
+      _videoController?.dispose();
+      _videoController = controller;
 
       // Listen for playback completion
       _videoController!.addListener(_onVideoPlayerUpdate);
@@ -214,7 +250,7 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
         );
       }
 
-      _chewieController = ChewieController(
+      final chewie = ChewieController(
         videoPlayerController: _videoController!,
         autoPlay: true,
         looping: false,
@@ -226,7 +262,11 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
         showControls: true,
       );
 
+      _chewieController?.dispose();
+      _chewieController = chewie;
+
       // Save progress every 5 seconds (for authenticated enrolled users only)
+      _progressSaveTimer?.cancel();
       _progressSaveTimer = Timer.periodic(const Duration(seconds: 5), (_) {
         final authRepo = ref.read(authRepositoryProvider);
         if (_isEnrolled && authRepo.isAuthenticated && _videoController != null && _videoController!.value.isPlaying) {
@@ -238,9 +278,20 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
         }
       });
 
-      if (mounted) setState(() {});
-    } catch (_) {
-      // Fallback for video init failure
+      if (mounted) {
+        setState(() {
+          _isVideoLoading = false;
+          _videoError = null;
+        });
+      }
+    } catch (e) {
+      debugPrint('[_initVideo] Failed to load video: $e');
+      if (mounted) {
+        setState(() {
+          _isVideoLoading = false;
+          _videoError = 'Unable to stream video. Please verify the media server is running and try again.';
+        });
+      }
     }
   }
 
@@ -1175,19 +1226,67 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
                         _chewieController!.videoPlayerController.value.isInitialized
                     ? Chewie(controller: _chewieController!)
                     : Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.play_circle_fill, size: 48, color: Colors.white54),
-                            const SizedBox(height: 8),
-                            Text(
-                              lesson.playableVideoUrl.isNotEmpty
-                                  ? 'Loading video...'
-                                  : 'No video stream available for this lesson',
-                              style: const TextStyle(color: Colors.white70, fontSize: 13),
-                            ),
-                          ],
-                        ),
+                        child: _isVideoLoading
+                            ? Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: const [
+                                  SizedBox(
+                                    width: 36,
+                                    height: 36,
+                                    child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white70),
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Loading video stream...',
+                                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                                  ),
+                                ],
+                              )
+                            : _videoError != null
+                                ? Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(Icons.error_outline_rounded, size: 40, color: Colors.amberAccent),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          _videoError!,
+                                          textAlign: TextAlign.center,
+                                          style: const TextStyle(color: Colors.white70, fontSize: 12),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        ElevatedButton.icon(
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: theme.colorScheme.primary,
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                          ),
+                                          icon: const Icon(Icons.refresh_rounded, size: 16),
+                                          label: const Text('Retry Video'),
+                                          onPressed: () {
+                                            if (_lesson != null) {
+                                              _initVideo(_lesson!, _progress ?? LessonProgress(lessonId: widget.lessonId));
+                                            }
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.play_circle_fill, size: 48, color: Colors.white54),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        lesson.playableVideoUrl.isNotEmpty
+                                            ? 'Loading video...'
+                                            : 'No video stream available for this lesson',
+                                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
                       ),
               ),
             ),

@@ -13,9 +13,15 @@ class LessonRepository {
       queryParameters: sectionId != null ? {'sectionId': sectionId} : null,
     );
     if (response is List) {
-      return response
+      final list = response
           .map((item) => LessonModel.fromJson(item as Map<String, dynamic>))
           .toList();
+      list.sort((a, b) {
+        final cmp = a.orderIndex.compareTo(b.orderIndex);
+        if (cmp != 0) return cmp;
+        return a.lessonId.compareTo(b.lessonId);
+      });
+      return list;
     }
     return [];
   }
@@ -29,9 +35,15 @@ class LessonRepository {
       queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
     if (response is List) {
-      return response
+      final list = response
           .map((item) => LessonModel.fromJson(item as Map<String, dynamic>))
           .toList();
+      list.sort((a, b) {
+        final cmp = a.orderIndex.compareTo(b.orderIndex);
+        if (cmp != 0) return cmp;
+        return a.lessonId.compareTo(b.lessonId);
+      });
+      return list;
     }
     return [];
   }

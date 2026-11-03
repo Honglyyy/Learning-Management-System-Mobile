@@ -13,9 +13,17 @@ class SectionRepository {
       queryParameters: courseId != null ? {'courseId': courseId} : null,
     );
     if (response is List) {
-      return response
+      final list = response
           .map((item) => SectionModel.fromJson(item as Map<String, dynamic>))
           .toList();
+      list.sort((a, b) {
+        if (a.orderIndex != 0 || b.orderIndex != 0) {
+          final cmp = a.orderIndex.compareTo(b.orderIndex);
+          if (cmp != 0) return cmp;
+        }
+        return a.sectionId.compareTo(b.sectionId);
+      });
+      return list;
     }
     return [];
   }
@@ -26,9 +34,17 @@ class SectionRepository {
       queryParameters: courseId != null ? {'courseId': courseId} : null,
     );
     if (response is List) {
-      return response
+      final list = response
           .map((item) => SectionModel.fromJson(item as Map<String, dynamic>))
           .toList();
+      list.sort((a, b) {
+        if (a.orderIndex != 0 || b.orderIndex != 0) {
+          final cmp = a.orderIndex.compareTo(b.orderIndex);
+          if (cmp != 0) return cmp;
+        }
+        return a.sectionId.compareTo(b.sectionId);
+      });
+      return list;
     }
     return [];
   }

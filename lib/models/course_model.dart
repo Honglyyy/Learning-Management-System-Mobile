@@ -107,6 +107,15 @@ class CourseModel {
     final rawSections = json['sections'] as List<dynamic>? ?? [];
     final rawReviews = json['reviews'] as List<dynamic>? ?? [];
 
+    final sections = rawSections.map((s) => SectionModel.fromJson(s)).toList()
+      ..sort((a, b) {
+        if (a.orderIndex != 0 || b.orderIndex != 0) {
+          final cmp = a.orderIndex.compareTo(b.orderIndex);
+          if (cmp != 0) return cmp;
+        }
+        return a.sectionId.compareTo(b.sectionId);
+      });
+
     return CourseModel(
       courseId: json['courseId'] as int? ?? json['id'] as int? ?? 0,
       title: json['title'] ?? '',
@@ -134,7 +143,7 @@ class CourseModel {
       expirationDate: json['expirationDate'],
       hasReEnrollmentDiscount: json['hasReEnrollmentDiscount'] as bool? ?? false,
       discountedPrice: json['discountedPrice'] as num?,
-      sections: rawSections.map((s) => SectionModel.fromJson(s)).toList(),
+      sections: sections,
       reviews: rawReviews.map((r) => CourseReview.fromJson(r)).toList(),
     );
   }

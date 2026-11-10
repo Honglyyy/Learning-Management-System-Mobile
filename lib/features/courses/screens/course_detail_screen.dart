@@ -13,6 +13,8 @@ import '../../../core/widgets/toast_service.dart';
 import '../../../models/assignment_model.dart';
 import '../../../models/course_model.dart';
 import '../../../models/lesson_model.dart';
+import '../../../models/payment_model.dart';
+import '../../payments/widgets/bakong_payment_sheet.dart';
 
 class CourseDetailScreen extends ConsumerStatefulWidget {
   final int courseId;
@@ -37,6 +39,8 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
   num? _discountedPrice;
   dynamic _expirationDate;
   int? _daysRemaining;
+  PaymentModel? _pendingBakongPayment;
+  bool _isStartingCheckout = false;
 
   bool _isLoading = true;
   String? _error;
@@ -91,6 +95,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
       int? daysRemaining;
       double progress = 0.0;
       List<int> completedIds = [];
+      PaymentModel? pendingBakong;
 
       if (authRepo.isAuthenticated) {
         try {
@@ -123,6 +128,19 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
         hasReEnrollmentDiscount = true;
       }
 
+      final bool isFreeEffective = course.isFree || (isExpired && discountedPrice == 0);
+      if (authRepo.isAuthenticated && !isEnrolled && !isFreeEffective) {
+        try {
+          final myPayments = await ref.read(paymentRepositoryProvider).getMyPayments();
+          for (final p in myPayments) {
+            if (p.courseId == widget.courseId && p.hasUnexpiredQr) {
+              pendingBakong = p;
+              break;
+            }
+          }
+        } catch (_) {}
+      }
+
       if (mounted) {
         setState(() {
           _course = course;
@@ -136,6 +154,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
           _daysRemaining = daysRemaining;
           _progressPercent = progress;
           _completedLessonIds = completedIds;
+          _pendingBakongPayment = pendingBakong;
           _isLoading = false;
         });
       }
@@ -165,121 +184,62 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     }
   }
 
-  void _showPaymentUnavailableDialog({bool isReEnrollment = false}) {
-    if (_course == null) return;
-    final theme = Theme.of(context);
-    final num payablePrice = isReEnrollment
-        ? (_discountedPrice ?? (_course!.price * 0.5))
-        : _course!.price;
+  Future<void> _startBakongPayment({PaymentModel? existingPending}) async {
+    if (_course == null || _isStartingCheckout) return;
 
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.account_balance_outlined, color: theme.colorScheme.primary),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Bakong Payment Coming Soon',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _course!.title,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                  const SizedBox(height: 6),
-                  if (isReEnrollment) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Original Price:', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        Text(
-                          Formatters.formatCurrency(_course!.price),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            decoration: TextDecoration.lineThrough,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Returning Student Discount:', style: TextStyle(fontSize: 12, color: Colors.green)),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            '-50% OFF',
-                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const Divider(height: 12),
-                  ],
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Course Price (USD):', style: TextStyle(fontSize: 13)),
-                      Text(
-                        Formatters.formatCurrency(payablePrice),
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Online payment methods have been removed while Bakong bank-verified checkout is being integrated. Free courses can still be enrolled immediately.',
-              style: TextStyle(fontSize: 13, height: 1.4),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              context.push('/my/payments');
-            },
-            child: const Text('View My Payments'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
+    final authRepo = ref.read(authRepositoryProvider);
+    if (!authRepo.isAuthenticated) {
+      context.push('/login');
+      return;
+    }
+
+    setState(() => _isStartingCheckout = true);
+    try {
+      final paymentRepo = ref.read(paymentRepositoryProvider);
+      PaymentModel payment;
+      if (existingPending != null && existingPending.hasUnexpiredQr) {
+        payment = existingPending;
+      } else {
+        final response = await paymentRepo.checkout(
+          widget.courseId,
+          provider: 'BAKONG_KHQR',
+        );
+        payment = response.toPaymentModel();
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _isStartingCheckout = false;
+        _pendingBakongPayment = payment.hasUnexpiredQr ? payment : null;
+      });
+
+      await showBakongPaymentSheet(
+        context: context,
+        initialPayment: payment,
+        onRegenerate: () async {
+          final regenerated = await paymentRepo.checkout(
+            widget.courseId,
+            provider: 'BAKONG_KHQR',
+          );
+          final nextPayment = regenerated.toPaymentModel();
+          if (mounted) {
+            setState(() {
+              _pendingBakongPayment = nextPayment.hasUnexpiredQr ? nextPayment : null;
+            });
+          }
+          return nextPayment;
+        },
+      );
+
+      if (mounted && !_isEnrolled) {
+        _loadCourseData();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isStartingCheckout = false);
+        ToastService.showError(e.toString());
+      }
+    }
   }
 
   String _formatDate(dynamic date) {
@@ -491,29 +451,35 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () {
-                      Navigator.pop(sheetContext);
-                      final authRepo = ref.read(authRepositoryProvider);
-                      if (!authRepo.isAuthenticated) {
-                        ToastService.showInfo('Please log in to continue.');
-                        context.push('/login');
-                        return;
-                      }
+                    onPressed: _isStartingCheckout
+                        ? null
+                        : () {
+                            Navigator.pop(sheetContext);
+                            final authRepo = ref.read(authRepositoryProvider);
+                            if (!authRepo.isAuthenticated) {
+                              ToastService.showInfo('Please log in to continue.');
+                              context.push('/login');
+                              return;
+                            }
 
-                      if (isCourseFree || (_isExpired && (_discountedPrice ?? 1) == 0)) {
-                        _handleFreeEnroll();
-                      } else {
-                        _showPaymentUnavailableDialog(isReEnrollment: _isExpired);
-                      }
-                    },
+                            if (isCourseFree || (_isExpired && (_discountedPrice ?? 1) == 0)) {
+                              _handleFreeEnroll();
+                            } else {
+                              _startBakongPayment(existingPending: _pendingBakongPayment);
+                            }
+                          },
                     child: Text(
                       _isExpired
                           ? (_course!.isFree || (_discountedPrice ?? 1) == 0)
                               ? 'Renew Access (Free)'
-                              : 'Renew Unavailable (50% Off) • ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}'
+                              : (_pendingBakongPayment != null
+                                  ? 'Resume Bakong QR (50% Off) • ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}'
+                                  : 'Renew with Bakong (50% Off) • ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}')
                           : isCourseFree
                               ? 'Enroll Now (Free)'
-                              : 'Bakong Payment Coming Soon • ${Formatters.formatCurrency(_course!.price)}',
+                              : (_pendingBakongPayment != null
+                                  ? 'Resume Bakong KHQR • ${Formatters.formatCurrency(_course!.price)}'
+                                  : 'Pay with Bakong KHQR • ${Formatters.formatCurrency(_course!.price)}'),
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                   ),
@@ -934,34 +900,47 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                 Expanded(
                   child: _isExpired
                       ? ElevatedButton.icon(
-                          icon: const Icon(Icons.replay, size: 18),
+                          icon: _isStartingCheckout
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : Icon(
+                                  (_discountedPrice ?? (_course!.price * 0.5)) == 0 || _course!.isFree
+                                      ? Icons.replay
+                                      : Icons.qr_code_2,
+                                  size: 18,
+                                ),
                           label: Text(
                             (_discountedPrice ?? (_course!.price * 0.5)) == 0 || _course!.isFree
                                 ? 'Renew Access (Free)'
-                                : 'Renew Unavailable (50% Off) — ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}',
+                                : _isStartingCheckout
+                                    ? 'Generating KHQR...'
+                                    : _pendingBakongPayment != null
+                                        ? 'Resume Bakong QR • ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}'
+                                        : 'Renew with Bakong (50% Off) • ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: (_discountedPrice ?? (_course!.price * 0.5)) == 0 || _course!.isFree
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.surfaceContainerHighest,
-                            foregroundColor: (_discountedPrice ?? (_course!.price * 0.5)) == 0 || _course!.isFree
-                                ? Colors.white
-                                : theme.colorScheme.onSurface,
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: Colors.white,
                           ),
-                          onPressed: () {
-                            final authRepo = ref.read(authRepositoryProvider);
-                            if (!authRepo.isAuthenticated) {
-                              context.push('/login');
-                              return;
-                            }
-                            if (_course!.isFree || (_discountedPrice ?? 1) == 0) {
-                              _handleFreeEnroll();
-                            } else {
-                              _showPaymentUnavailableDialog(isReEnrollment: true);
-                            }
-                          },
+                          onPressed: _isStartingCheckout
+                              ? null
+                              : () {
+                                  final authRepo = ref.read(authRepositoryProvider);
+                                  if (!authRepo.isAuthenticated) {
+                                    context.push('/login');
+                                    return;
+                                  }
+                                  if (_course!.isFree || (_discountedPrice ?? 1) == 0) {
+                                    _handleFreeEnroll();
+                                  } else {
+                                    _startBakongPayment(existingPending: _pendingBakongPayment);
+                                  }
+                                },
                         )
                       : _isEnrolled
                           ? _progressPercent >= 100.0
@@ -985,34 +964,57 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                                   },
                                   child: Text('Continue Learning (${Formatters.formatProgress(_progressPercent)})'),
                                 )
-                          : ElevatedButton(
-                              style: _course!.isFree
-                                  ? null
-                                  : ElevatedButton.styleFrom(
-                                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                                      foregroundColor: theme.colorScheme.onSurface,
-                                    ),
-                              onPressed: () {
-                                final authRepo = ref.read(authRepositoryProvider);
-                                if (!authRepo.isAuthenticated) {
-                                  context.push('/login');
-                                  return;
-                                }
-                                if (_course!.isFree) {
-                                  _handleFreeEnroll();
-                                } else {
-                                  _showPaymentUnavailableDialog();
-                                }
-                              },
-                              child: Text(_course!.isFree ? 'Enroll Now (Free)' : 'Bakong Payment Coming Soon'),
-                            ),
+                          : _course!.isFree
+                              ? ElevatedButton(
+                                  onPressed: () {
+                                    final authRepo = ref.read(authRepositoryProvider);
+                                    if (!authRepo.isAuthenticated) {
+                                      context.push('/login');
+                                      return;
+                                    }
+                                    _handleFreeEnroll();
+                                  },
+                                  child: const Text('Enroll Now (Free)'),
+                                )
+                              : ElevatedButton.icon(
+                                  icon: _isStartingCheckout
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                        )
+                                      : const Icon(Icons.qr_code_2, size: 18),
+                                  label: Text(
+                                    _isStartingCheckout
+                                        ? 'Generating KHQR...'
+                                        : _pendingBakongPayment != null
+                                            ? 'Resume Bakong QR • ${Formatters.formatCurrency(_course!.price)}'
+                                            : 'Pay with Bakong KHQR',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: theme.colorScheme.primary,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  onPressed: _isStartingCheckout
+                                      ? null
+                                      : () {
+                                          final authRepo = ref.read(authRepositoryProvider);
+                                          if (!authRepo.isAuthenticated) {
+                                            context.push('/login');
+                                            return;
+                                          }
+                                          _startBakongPayment(existingPending: _pendingBakongPayment);
+                                        },
+                                ),
                 ),
               ],
             ),
             if (_isExpired) ...[
               const SizedBox(height: 6),
               const Text(
-                '50% re-enrollment discount applies automatically once Bakong payment is integrated',
+                '50% re-enrollment discount applies automatically via Bakong KHQR',
                 style: TextStyle(fontSize: 10, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),

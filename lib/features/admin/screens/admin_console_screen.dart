@@ -420,6 +420,7 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                 DropdownMenuItem(value: 'ALL', child: Text('All Payments')),
                 DropdownMenuItem(value: 'PAID', child: Text('Paid')),
                 DropdownMenuItem(value: 'PENDING', child: Text('Pending')),
+                DropdownMenuItem(value: 'EXPIRED', child: Text('Expired')),
                 DropdownMenuItem(value: 'FAILED', child: Text('Failed')),
               ],
               onChanged: (val) => setState(() => _paymentFilter = val ?? 'ALL'),
@@ -447,6 +448,9 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                       case 'PENDING':
                         statusColor = Colors.orange;
                         break;
+                      case 'EXPIRED':
+                        statusColor = Colors.blueGrey;
+                        break;
                       case 'FAILED':
                         statusColor = Colors.red;
                         break;
@@ -464,20 +468,41 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                           metaParts.join(' • '),
                           style: const TextStyle(fontSize: 11),
                         ),
-                        trailing: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: statusColor.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            p.status,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: statusColor,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (p.isPending && p.isBakong)
+                              IconButton(
+                                tooltip: 'Verify Bakong status',
+                                icon: const Icon(Icons.refresh, size: 18),
+                                onPressed: () async {
+                                  try {
+                                    final updated = await ref
+                                        .read(paymentRepositoryProvider)
+                                        .checkPaymentStatus(p.paymentId);
+                                    ToastService.showInfo('Payment #${p.paymentId}: ${updated.status}');
+                                    _loadSection();
+                                  } catch (e) {
+                                    ToastService.showError(e.toString());
+                                  }
+                                },
+                              ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: statusColor.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                p.status,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: statusColor,
+                                ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     );

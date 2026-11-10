@@ -17,16 +17,21 @@ class PaymentRepository {
 
   Future<CheckoutResponse> checkout(
     int courseId, {
-    String? provider,
+    String provider = 'BAKONG_KHQR',
   }) async {
     final response = await _api.post(
       ApiEndpoints.paymentsCheckout,
       data: {
         'courseId': courseId,
-        if (provider != null && provider.isNotEmpty) 'provider': provider,
+        if (provider.isNotEmpty) 'provider': provider,
       },
     );
     return CheckoutResponse.fromJson(response as Map<String, dynamic>);
+  }
+
+  Future<PaymentModel> checkPaymentStatus(int paymentId) async {
+    final response = await _api.get(ApiEndpoints.paymentStatus(paymentId));
+    return PaymentModel.fromJson(response as Map<String, dynamic>);
   }
 
   Future<void> confirmPayment(int paymentId) async {

@@ -183,5 +183,60 @@ void main() {
       expect(assigned.provider, 'BAKONG');
       expect(assigned.isPaid, isTrue);
     });
+
+    test('PaymentModel and CheckoutResponse parse Bakong KHQR fields cleanly', () {
+      final futureIso = DateTime.now().toUtc().add(const Duration(minutes: 10)).toIso8601String();
+      final pastIso = DateTime.now().toUtc().subtract(const Duration(minutes: 2)).toIso8601String();
+
+      final checkout = CheckoutResponse.fromJson({
+        'paymentId': 99,
+        'courseId': 7,
+        'courseTitle': 'Flutter Payment Integration',
+        'amount': 19.50,
+        'originalAmount': 39.00,
+        'discountAmount': 19.50,
+        'isReEnrollmentDiscount': true,
+        'provider': 'BAKONG_KHQR',
+        'providerReference': 'BK-1234567890',
+        'status': 'PENDING',
+        'qrCode': '000201010212...',
+        'md5': 'abc123md5',
+        'deepLink': 'https://bakong.nbc.gov.kh/link',
+        'currency': 'USD',
+        'expiresAt': futureIso,
+      });
+
+      final payment = checkout.toPaymentModel();
+      expect(payment.paymentId, 99);
+      expect(payment.courseId, 7);
+      expect(payment.isBakong, isTrue);
+      expect(payment.qrCode, '000201010212...');
+      expect(payment.md5, 'abc123md5');
+      expect(payment.deepLink, 'https://bakong.nbc.gov.kh/link');
+      expect(payment.currency, 'USD');
+      expect(payment.isReEnrollmentDiscount, isTrue);
+      expect(payment.hasUnexpiredQr, isTrue);
+
+      final expired = PaymentModel.fromJson({
+        'paymentId': 100,
+        'courseId': 7,
+        'amount': 19.50,
+        'provider': 'BAKONG_KHQR',
+        'status': 'PENDING',
+        'qrCode': '000201010212...',
+        'expiresAt': pastIso,
+      });
+      expect(expired.hasUnexpiredQr, isFalse);
+
+      final markedExpired = PaymentModel.fromJson({
+        'paymentId': 101,
+        'courseId': 7,
+        'amount': 19.50,
+        'provider': 'BAKONG_KHQR',
+        'status': 'EXPIRED',
+      });
+      expect(markedExpired.isExpired, isTrue);
+      expect(markedExpired.hasUnexpiredQr, isFalse);
+    });
   });
 }

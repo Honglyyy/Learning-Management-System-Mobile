@@ -102,7 +102,6 @@ class ApiEndpoints {
   static const String paymentsMe = '/api/payments/me';
   static const String payments = '/api/payments';
   static String paymentById(int id) => '/api/payments/$id';
-  static String paymentStatus(int id) => '/api/payments/$id/status';
 
   // Certificates & Favorites
   static const String certificatesMe = '/api/certificates/me';

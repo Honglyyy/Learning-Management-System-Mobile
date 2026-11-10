@@ -17,6 +17,13 @@ class EnrollmentRepository {
     return [];
   }
 
+  Future<void> enrollCourse(int courseId) async {
+    await _api.post(
+      ApiEndpoints.enrollments,
+      data: {'courseId': courseId},
+    );
+  }
+
   Future<void> cancelEnrollmentMe(int courseId) async {
     await _api.delete(ApiEndpoints.cancelEnrollmentMe(courseId));
   }

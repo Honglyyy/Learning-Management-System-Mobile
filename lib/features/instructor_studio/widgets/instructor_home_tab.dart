@@ -512,195 +512,84 @@ class _InstructorHomeTabState extends State<InstructorHomeTab> {
     );
   }
 
-  // --- Balance Card with side peek decorations ---
+  // --- Plain Earnings Balance Card ---
   Widget _buildBalanceCardSection(BuildContext context, String name, String balance) {
-    return SizedBox(
-      height: 185,
-      child: Stack(
-        alignment: Alignment.center,
-        clipBehavior: Clip.none,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF3A69F6), Color(0xFF234FE6)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF234FE6).withValues(alpha: 0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Left peeking card edge (Yellow)
-          Positioned(
-            left: -14,
-            top: 22,
-            bottom: 22,
-            child: Container(
-              width: 22,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFFAE33),
-                borderRadius: BorderRadius.horizontal(
-                  left: Radius.circular(16),
-                  right: Radius.circular(8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Current Balance',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.9),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-            ),
-          ),
-
-          // Right peeking card edge (Cyan)
-          Positioned(
-            right: -14,
-            top: 22,
-            bottom: 22,
-            child: Container(
-              width: 22,
-              decoration: const BoxDecoration(
-                color: Color(0xFF38B2EA),
-                borderRadius: BorderRadius.horizontal(
-                  left: Radius.circular(8),
-                  right: Radius.circular(16),
-                ),
+              Icon(
+                Icons.account_balance_wallet_outlined,
+                color: Colors.white.withValues(alpha: 0.9),
+                size: 20,
               ),
-            ),
+            ],
           ),
-
-          // Main Blue Card
+          const SizedBox(height: 16),
           Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 2),
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF3A69F6), Color(0xFF234FE6)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF234FE6).withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+              color: Colors.black.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Top row: Current Balance + Mastercard Logo
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Current Balance',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 34,
-                      height: 20,
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            left: 0,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFEB001B),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 0,
-                            child: Container(
-                              width: 20,
-                              height: 20,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF79E1B).withValues(alpha: 0.85),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                // Amount Pill
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text(
-                        'USD',
-                        style: TextStyle(
-                          color: Color(0xFF67E8F9),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        balance,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Masked Card Number
                 const Text(
-                  '****   ****   ****   1474',
+                  'USD',
                   style: TextStyle(
+                    color: Color(0xFF67E8F9),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  balance,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
-                    letterSpacing: 2,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-
-                // Bottom row: Name & Expiry
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          'Ex. Date',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.75),
-                            fontSize: 9,
-                          ),
-                        ),
-                        const Text(
-                          '10/28',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
               ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          Text(
+            name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

@@ -6,7 +6,6 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/api_alert.dart';
 import '../../../core/widgets/empty_state.dart';
 import '../../../models/payment_model.dart';
-import '../widgets/aba_payway_dialog.dart';
 
 class PaymentHistoryScreen extends ConsumerStatefulWidget {
   const PaymentHistoryScreen({super.key});
@@ -113,7 +112,7 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'You have pending payments. Complete payment to activate enrollment.',
+                          'You have pending payment transactions awaiting bank verification.',
                           style: TextStyle(fontSize: 12, color: Colors.orange, fontWeight: FontWeight.w600),
                         ),
                       ),
@@ -160,8 +159,10 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                                             Formatters.formatCurrency(p.amount),
                                             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                           ),
-                                          const SizedBox(width: 8),
-                                          Text('• ${p.provider}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                          if (p.provider.isNotEmpty) ...[
+                                            const SizedBox(width: 8),
+                                            Text('• ${p.provider}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                                          ],
                                           const Spacer(),
                                           if (p.createdAt != null)
                                             Text(
@@ -176,32 +177,26 @@ class _PaymentHistoryScreenState extends ConsumerState<PaymentHistoryScreen> {
                                       ],
                                       const SizedBox(height: 10),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           if (p.isPending)
-                                            ElevatedButton(
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: const Color(0xFF003865),
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            const Text(
+                                              'Awaiting bank verification',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.orange,
+                                                fontWeight: FontWeight.w500,
                                               ),
-                                              onPressed: () {
-                                                AbaPayWayDialog.show(
-                                                  context,
-                                                  courseId: p.courseId,
-                                                  courseTitle: p.courseTitle,
-                                                  price: p.amount,
-                                                );
-                                              },
-                                              child: const Text('Pay with ABA', style: TextStyle(fontSize: 12)),
                                             )
                                           else
-                                            OutlinedButton(
-                                              style: OutlinedButton.styleFrom(
-                                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                              ),
-                                              onPressed: () => context.push('/courses/${p.courseId}'),
-                                              child: const Text('Go to Course', style: TextStyle(fontSize: 12)),
+                                            const SizedBox.shrink(),
+                                          OutlinedButton(
+                                            style: OutlinedButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                             ),
+                                            onPressed: () => context.push('/courses/${p.courseId}'),
+                                            child: const Text('Go to Course', style: TextStyle(fontSize: 12)),
+                                          ),
                                         ],
                                       ),
                                     ],

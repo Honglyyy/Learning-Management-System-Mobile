@@ -655,9 +655,7 @@ class _LessonPlayerScreenState extends ConsumerState<LessonPlayerScreen> {
 
     if (_course!.isFree) {
       try {
-        final paymentRepo = ref.read(paymentRepositoryProvider);
-        final checkout = await paymentRepo.checkout(_course!.courseId);
-        await paymentRepo.confirmPayment(checkout.paymentId);
+        await ref.read(enrollmentRepositoryProvider).enrollCourse(_course!.courseId);
         ToastService.showSuccess('Enrolled successfully!');
         _disposePlayer();
         _loadLesson();

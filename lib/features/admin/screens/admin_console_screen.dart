@@ -434,26 +434,50 @@ class _AdminConsoleScreenState extends ConsumerState<AdminConsoleScreen> {
                   itemCount: filtered.length,
                   itemBuilder: (context, index) {
                     final p = filtered[index];
+                    final metaParts = <String>[
+                      p.courseTitle,
+                      if (p.provider.isNotEmpty) p.provider,
+                      'Ref: ${p.providerReference ?? "-"}',
+                    ];
+                    final Color statusColor;
+                    switch (p.status) {
+                      case 'PAID':
+                        statusColor = Colors.green;
+                        break;
+                      case 'PENDING':
+                        statusColor = Colors.orange;
+                        break;
+                      case 'FAILED':
+                        statusColor = Colors.red;
+                        break;
+                      default:
+                        statusColor = Colors.grey;
+                    }
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8),
                       child: ListTile(
-                        title: Text('${p.studentName ?? "Student"} • ${Formatters.formatCurrency(p.amount)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                        subtitle: Text('${p.courseTitle} • ${p.provider} • Ref: ${p.providerReference ?? "-"}', style: const TextStyle(fontSize: 11)),
-                        trailing: DropdownButton<String>(
-                          value: p.status,
-                          underline: const SizedBox.shrink(),
-                          items: const [
-                            DropdownMenuItem(value: 'PAID', child: Text('PAID', style: TextStyle(fontSize: 11, color: Colors.green))),
-                            DropdownMenuItem(value: 'PENDING', child: Text('PENDING', style: TextStyle(fontSize: 11, color: Colors.orange))),
-                            DropdownMenuItem(value: 'FAILED', child: Text('FAILED', style: TextStyle(fontSize: 11, color: Colors.red))),
-                          ],
-                          onChanged: (newStatus) async {
-                            if (newStatus != null && newStatus != p.status) {
-                              await ref.read(paymentRepositoryProvider).updatePaymentStatus(p.paymentId, newStatus);
-                              ToastService.showSuccess('Payment status updated');
-                              _loadSection();
-                            }
-                          },
+                        title: Text(
+                          '${p.studentName ?? "Student"} • ${Formatters.formatCurrency(p.amount)}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        ),
+                        subtitle: Text(
+                          metaParts.join(' • '),
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            p.status,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: statusColor,
+                            ),
+                          ),
                         ),
                       ),
                     );

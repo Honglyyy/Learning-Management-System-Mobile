@@ -76,6 +76,9 @@ void main() {
     expect(find.text('Current Balance'), findsOneWidget);
     expect(find.text('USD'), findsOneWidget);
     expect(find.text('248.75'), findsOneWidget);
+    expect(find.text('****   ****   ****   1474'), findsNothing);
+    expect(find.text('Ex. Date'), findsNothing);
+    expect(find.text('10/28'), findsNothing);
 
     // Verify courses listing section
     expect(find.text('All Courses'), findsOneWidget);

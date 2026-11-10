@@ -13,7 +13,6 @@ import '../../../core/widgets/toast_service.dart';
 import '../../../models/assignment_model.dart';
 import '../../../models/course_model.dart';
 import '../../../models/lesson_model.dart';
-import '../../payments/widgets/aba_payway_dialog.dart';
 
 class CourseDetailScreen extends ConsumerStatefulWidget {
   final int courseId;
@@ -158,14 +157,129 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
     }
 
     try {
-      final paymentRepo = ref.read(paymentRepositoryProvider);
-      final checkout = await paymentRepo.checkout(widget.courseId);
-      await paymentRepo.confirmPayment(checkout.paymentId);
+      await ref.read(enrollmentRepositoryProvider).enrollCourse(widget.courseId);
       ToastService.showSuccess('Enrolled successfully!');
       _loadCourseData();
     } catch (e) {
       ToastService.showError(e.toString());
     }
+  }
+
+  void _showPaymentUnavailableDialog({bool isReEnrollment = false}) {
+    if (_course == null) return;
+    final theme = Theme.of(context);
+    final num payablePrice = isReEnrollment
+        ? (_discountedPrice ?? (_course!.price * 0.5))
+        : _course!.price;
+
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.account_balance_outlined, color: theme.colorScheme.primary),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Bakong Payment Coming Soon',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _course!.title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 6),
+                  if (isReEnrollment) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Original Price:', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text(
+                          Formatters.formatCurrency(_course!.price),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            decoration: TextDecoration.lineThrough,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text('Returning Student Discount:', style: TextStyle(fontSize: 12, color: Colors.green)),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            '-50% OFF',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 12),
+                  ],
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Course Price (USD):', style: TextStyle(fontSize: 13)),
+                      Text(
+                        Formatters.formatCurrency(payablePrice),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Online payment methods have been removed while Bakong bank-verified checkout is being integrated. Free courses can still be enrolled immediately.',
+              style: TextStyle(fontSize: 13, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              context.push('/my/payments');
+            },
+            child: const Text('View My Payments'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatDate(dynamic date) {
@@ -389,24 +503,17 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                       if (isCourseFree || (_isExpired && (_discountedPrice ?? 1) == 0)) {
                         _handleFreeEnroll();
                       } else {
-                        AbaPayWayDialog.show(
-                          context,
-                          courseId: _course!.courseId,
-                          courseTitle: _course!.title,
-                          price: _isExpired ? (_discountedPrice ?? (_course!.price * 0.5)) : _course!.price,
-                          originalPrice: _course!.price,
-                          isReEnrollment: _isExpired,
-                        );
+                        _showPaymentUnavailableDialog(isReEnrollment: _isExpired);
                       }
                     },
                     child: Text(
                       _isExpired
                           ? (_course!.isFree || (_discountedPrice ?? 1) == 0)
                               ? 'Renew Access (Free)'
-                              : 'Renew Access (50% Off) • ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}'
+                              : 'Renew Unavailable (50% Off) • ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}'
                           : isCourseFree
                               ? 'Enroll Now (Free)'
-                              : 'Pay to Unlock • ${Formatters.formatCurrency(_course!.price)}',
+                              : 'Bakong Payment Coming Soon • ${Formatters.formatCurrency(_course!.price)}',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     ),
                   ),
@@ -831,13 +938,17 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                           label: Text(
                             (_discountedPrice ?? (_course!.price * 0.5)) == 0 || _course!.isFree
                                 ? 'Renew Access (Free)'
-                                : 'Renew Access (50% Off) — ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}',
+                                : 'Renew Unavailable (50% Off) — ${Formatters.formatCurrency(_discountedPrice ?? (_course!.price * 0.5))}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: Colors.white,
+                            backgroundColor: (_discountedPrice ?? (_course!.price * 0.5)) == 0 || _course!.isFree
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.surfaceContainerHighest,
+                            foregroundColor: (_discountedPrice ?? (_course!.price * 0.5)) == 0 || _course!.isFree
+                                ? Colors.white
+                                : theme.colorScheme.onSurface,
                           ),
                           onPressed: () {
                             final authRepo = ref.read(authRepositoryProvider);
@@ -848,14 +959,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                             if (_course!.isFree || (_discountedPrice ?? 1) == 0) {
                               _handleFreeEnroll();
                             } else {
-                              AbaPayWayDialog.show(
-                                context,
-                                courseId: _course!.courseId,
-                                courseTitle: _course!.title,
-                                price: _discountedPrice ?? (_course!.price * 0.5),
-                                originalPrice: _course!.price,
-                                isReEnrollment: true,
-                              );
+                              _showPaymentUnavailableDialog(isReEnrollment: true);
                             }
                           },
                         )
@@ -882,6 +986,12 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                                   child: Text('Continue Learning (${Formatters.formatProgress(_progressPercent)})'),
                                 )
                           : ElevatedButton(
+                              style: _course!.isFree
+                                  ? null
+                                  : ElevatedButton.styleFrom(
+                                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                                      foregroundColor: theme.colorScheme.onSurface,
+                                    ),
                               onPressed: () {
                                 final authRepo = ref.read(authRepositoryProvider);
                                 if (!authRepo.isAuthenticated) {
@@ -891,15 +1001,10 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
                                 if (_course!.isFree) {
                                   _handleFreeEnroll();
                                 } else {
-                                  AbaPayWayDialog.show(
-                                    context,
-                                    courseId: _course!.courseId,
-                                    courseTitle: _course!.title,
-                                    price: _course!.price,
-                                  );
+                                  _showPaymentUnavailableDialog();
                                 }
                               },
-                              child: Text(_course!.isFree ? 'Enroll Now (Free)' : 'Buy Now'),
+                              child: Text(_course!.isFree ? 'Enroll Now (Free)' : 'Bakong Payment Coming Soon'),
                             ),
                 ),
               ],
@@ -907,7 +1012,7 @@ class _CourseDetailScreenState extends ConsumerState<CourseDetailScreen>
             if (_isExpired) ...[
               const SizedBox(height: 6),
               const Text(
-                '50% re-enrollment discount automatically applied for returning students',
+                '50% re-enrollment discount applies automatically once Bakong payment is integrated',
                 style: TextStyle(fontSize: 10, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),

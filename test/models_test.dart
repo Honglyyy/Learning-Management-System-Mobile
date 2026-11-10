@@ -5,6 +5,7 @@ import 'package:lms_flutter/models/quiz_model.dart';
 import 'package:lms_flutter/models/assignment_model.dart';
 import 'package:lms_flutter/models/category_model.dart';
 import 'package:lms_flutter/models/enrollment_model.dart';
+import 'package:lms_flutter/models/payment_model.dart';
 
 void main() {
   group('Model Deserialization Tests', () {
@@ -157,6 +158,30 @@ void main() {
       expect(updated.courseCoverUrl, 'https://res.cloudinary.com/lyxxfhot/image/upload/sample.png');
       expect(updated.instructorName, 'Lay Hongly');
       expect(updated.courseTitle, 'Docker & Containerization Mastery');
+    });
+
+    test('PaymentModel defaults provider to empty string when missing', () {
+      final payment = PaymentModel.fromJson({
+        'paymentId': 12,
+        'courseId': 3,
+        'courseTitle': 'Clean Architecture',
+        'amount': 49.0,
+        'status': 'PENDING',
+      });
+
+      expect(payment.paymentId, 12);
+      expect(payment.provider, '');
+      expect(payment.isPending, isTrue);
+
+      final assigned = PaymentModel.fromJson({
+        'paymentId': 13,
+        'courseId': 4,
+        'amount': 25.0,
+        'provider': 'BAKONG',
+        'status': 'PAID',
+      });
+      expect(assigned.provider, 'BAKONG');
+      expect(assigned.isPaid, isTrue);
     });
   });
 }

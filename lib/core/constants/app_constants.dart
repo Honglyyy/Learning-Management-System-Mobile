@@ -1,6 +1,16 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 class AppConstants {
   static const String apiBaseUrl = 'https://learning-management-system-fk98.onrender.com';
-  // static const String apiBaseUrl = 'http://localhost:8080';
+  /// Base URL for backend API.
+  /// Android emulator maps the host machine's 127.0.0.1 to 10.0.2.2.
+  // static String get apiBaseUrl {
+  //   if (!kIsWeb && Platform.isAndroid) {
+  //     return 'http://10.0.2.2:8080';
+  //   }
+  //   return 'http://localhost:8080';
+  // }
 
   // Storage Keys
   static const String keyToken = 'token';

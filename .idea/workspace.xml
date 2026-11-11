@@ -5,10 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8aecc561-8ddc-4901-8be2-2c857a8bc7e8" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/android/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/android/build/reports/problems/problems-report.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/android/app/src/main/AndroidManifest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/core/constants/app_constants.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/core/constants/app_constants.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/instructor_studio/screens/instructor_studio_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/instructor_studio/screens/instructor_studio_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/features/instructor_studio/widgets/instructor_manage_tab.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/features/instructor_studio/widgets/instructor_manage_tab.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/models/assignment_model.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/models/assignment_model.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/repositories/assignment_repository.dart" beforeDir="false" afterPath="$PROJECT_DIR$/lib/repositories/assignment_repository.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/instructor_dashboard_redesign_test.dart" beforeDir="false" afterPath="$PROJECT_DIR$/test/instructor_dashboard_redesign_test.dart" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -19,7 +23,7 @@
     <option name="formatViaClangd" value="false" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="1574" />
+    <option name="cachedIndexableFilesCount" value="38345" />
   </component>
   <component name="FileEditorManager">
     <leaf>
@@ -155,7 +159,7 @@
     &quot;io.flutter.reload.alreadyRun&quot;: &quot;true&quot;,
     &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/ly/University/Flutter/aub-batch-09-y3-s1-m-g2-Online-Leaning-App&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/ly/University/Flutter/Learning-Management-System-Mobile&quot;,
     &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
     &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
     &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,

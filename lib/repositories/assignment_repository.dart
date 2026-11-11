@@ -55,13 +55,14 @@ class AssignmentRepository {
 
   Future<void> gradeSubmission(
     int submissionId, {
-    required num score,
+    num? score,
     String? grade,
     String? feedback,
   }) async {
-    final body = <String, dynamic>{'score': score};
-    if (grade != null) body['grade'] = grade;
-    if (feedback != null) body['feedback'] = feedback;
+    final body = <String, dynamic>{};
+    if (score != null) body['score'] = score;
+    if (grade != null && grade.trim().isNotEmpty) body['grade'] = grade.trim();
+    if (feedback != null && feedback.trim().isNotEmpty) body['feedback'] = feedback.trim();
     await _api.put(
       ApiEndpoints.gradeSubmission(submissionId),
       data: body,
